@@ -16,7 +16,7 @@ and select `use this template`.
 What follows is a template `README.md`.
 
 <!--
-TODO: Rename the `template` folder to something that makes sense for
+TODO: Rename the `vivarium_tellurium` folder to something that makes sense for
 your project.
 -->
 

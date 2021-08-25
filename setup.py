@@ -10,11 +10,11 @@ setup(
     name='',  # TODO: Put your package name here.
     version='0.0.1',
     packages=[
-        # TODO: Replace 'template' with the name of your folder.
-        'template',
-        'template.processes',
-        'template.composites',
-        'template.experiments',
+        # TODO: Replace 'vivarium_tellurium' with the name of your folder.
+        'vivarium_tellurium',
+        'vivarium_tellurium.processes',
+        'vivarium_tellurium.composites',
+        'vivarium_tellurium.experiments',
     ],
     author='',  # TODO: Put your name here.
     author_email='',  # TODO: Put your email here.
