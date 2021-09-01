@@ -28,8 +28,8 @@ setup(
     package_data={},
     include_package_data=True,
     install_requires=[
-        'vivarium-core>=0.3.0',
+        'vivarium-core>=0.3.4',
         'pytest',
-        # TODO: Add other dependencies.
+        'biosimulators-tellurium',
     ],
 )
