@@ -21,7 +21,7 @@ class TelluriumProcess(Process):
         return {}
 
 
-def run_tellurium_process():
+def test_tellurium_process():
     parameters = {}
     process = TelluriumProcess(parameters)
 
@@ -38,4 +38,4 @@ def run_tellurium_process():
 
 
 if __name__ == '__main__':
-    run_tellurium_process()
+    test_tellurium_process()
