@@ -5,6 +5,7 @@ from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
 from biosimulators_tellurium.core import exec_sed_task
+from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Variable, Model, UniformTimeCourseSimulation, ModelLanguage)
 from biosimulators_utils.model_lang.sbml.utils import get_parameters_variables_for_simulation
@@ -43,9 +44,13 @@ class TelluriumProcess(Process):
         )
 
         for variable in self.variables:
-            variable.task = self.task
+            variable.task = self.task                    
 
-        # TODO -- turn validation off
+        self.config = Config(
+            VALIDATE_SEDML=False,
+            VALIDATE_SEDML_MODELS=False,
+            LOG=False,
+        )
 
     def ports_schema(self):
         return {
@@ -90,6 +95,7 @@ class TelluriumProcess(Process):
         results, log = exec_sed_task(
             self.task,
             self.variables,
+            config=self.config,
         )
 
         # TODO -- filter variables from results
