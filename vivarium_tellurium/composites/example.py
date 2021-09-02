@@ -1,13 +1,10 @@
 from vivarium.core.composer import Composer
 
 
-
 class Example(Composer):
 
-    def generate_topology(self, config: Optional[dict]) -> Topology:
+    def generate_topology(self, config):
         return {}
 
-    def generate_processes(
-            self,
-            config: Optional[dict]) -> Processes:
+    def generate_processes(self, config):
         return {}
