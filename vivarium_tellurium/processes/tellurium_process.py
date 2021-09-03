@@ -21,10 +21,12 @@ class TelluriumProcess(Process):
         super().__init__(parameters)
 
         model = Model(
+            id='model',
             source=self.parameters['sbml_path'],
             language=ModelLanguage.SBML.value,
         )
         simulation = UniformTimeCourseSimulation(
+            id='simulation',
             initial_time=0.,
             output_start_time=0.,
             number_of_points=1,
@@ -32,6 +34,7 @@ class TelluriumProcess(Process):
             algorithm=Algorithm(kisao_id='KISAO_0000019'),
         )
         self.task = Task(
+            id='task',
             model=model,
             simulation=simulation,
         )
@@ -72,11 +75,14 @@ class TelluriumProcess(Process):
 
         self.variables = {'__all__': []}
         for variable_type in self.variable_types:
-            self.variables[variable_type['id']] = list(
-                filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), all_variables))
+            variables = list(filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), all_variables))
+            self.variables[variable_type['id']] = variables
             self.variables['__all__'] += self.variables[variable_type['id']]
 
-        self.variable_id_target_map = {variable.id: variable.target for variable in self.variables['__all__']}
+        self.variable_id_target_map = {}
+        for variable in self.variables['__all__']:
+            variable.task = self.task
+            self.variable_id_target_map[variable.id] = variable.target
 
         self.config = Config(LOG=False)
 
@@ -138,7 +144,7 @@ def test_tellurium_process():
 
     # run the simulation
     sim_settings = {
-        'total_time': 10,
+        'total_time': 10.,
         'initial_state': initial_state}
     output = simulate_process(process, sim_settings)
 
