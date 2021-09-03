@@ -108,11 +108,12 @@ class TelluriumProcess(Process):
         for variable_type in self.variable_types:
             if variable_type['in']:
                 variable_states = states[variable_type['id']]
-                for variable_id, variable_value in variable_states.items():
-                    self.task.changes.append(ModelAttributeChange(
-                        target=self.variable_id_target_map[variable_id],
-                        new_value=variable_value,
-                    ))
+                if variable_states:
+                    for variable_id, variable_value in variable_states.items():
+                        self.task.changes.append(ModelAttributeChange(
+                            target=self.variable_id_target_map[variable_id],
+                            new_value=variable_value,
+                        ))
 
         # execute step
         raw_results, log = exec_sed_task(
@@ -126,11 +127,11 @@ class TelluriumProcess(Process):
         results = {}
         for variable_type in self.variable_types:
             variables = self.variables[variable_type['id']]
-            results[variable_type['id']] = {
-                variable.id: raw_results[variable.id][-1]
-                for variable in variables
-            }
-
+            if variables:
+                results[variable_type['id']] = {
+                    variable.id: raw_results[variable.id][-1]
+                    for variable in variables
+                }
         return results
 
 
