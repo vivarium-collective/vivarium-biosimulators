@@ -73,7 +73,7 @@ class TelluriumProcess(Process):
         self.variables = {'__all__': []}
         for variable_type in self.variable_types:
             self.variables[variable_type['id']] = list(
-                filter(lambda var: var.target.startswith(variable_type['xpath_prefix']), all_variables))
+                filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), all_variables))
             self.variables['__all__'] += self.variables[variable_type['id']]
 
         self.variable_id_target_map = {variable.id: variable.target for variable in self.variables['__all__']}
