@@ -116,7 +116,7 @@ class TelluriumProcess(Process):
         # execute step
         raw_results, log = exec_sed_task(
             self.task,
-            self.all_variables,
+            self.variables['__all__'],
             preprocessed_task=self.preprocessed_task,
             config=self.config,
         )
