@@ -141,8 +141,8 @@ def test_tellurium_process():
     }
     process = TelluriumProcess(parameters)
 
-    # declare the initial state, mirroring the ports structure
-    initial_state = {}
+    # get the initial state
+    initial_state = process.initial_state()
 
     # run the simulation
     sim_settings = {
