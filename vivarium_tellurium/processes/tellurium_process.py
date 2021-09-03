@@ -4,7 +4,7 @@ Execute by running: ``python vivarium_tellurium/process/tellurium_process.py``
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
-from biosimulators_tellurium.core import exec_sed_task
+from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Variable, Model, UniformTimeCourseSimulation, ModelLanguage)
@@ -14,7 +14,7 @@ from biosimulators_utils.model_lang.sbml.utils import get_parameters_variables_f
 class TelluriumProcess(Process):
     defaults = {
         'sbml_path': '',
-        'time_step': 1,
+        'time_step': 1.,
     }
 
     def __init__(self, parameters=None):
@@ -25,8 +25,8 @@ class TelluriumProcess(Process):
             language=ModelLanguage.SBML.value,
         )
         simulation = UniformTimeCourseSimulation(
-            initial_time=0,
-            output_start_time=0,
+            initial_time=0.,
+            output_start_time=0.,
             number_of_points=1,
             output_end_time=self.parameters['time_step'],
             algorithm=Algorithm(kisao_id='KISAO_0000019'),
@@ -37,72 +37,94 @@ class TelluriumProcess(Process):
         )
 
         # extract variables from the model
-        (parameters, _, self.variables) = get_parameters_variables_for_simulation(
+        (parameters, _, all_variables) = get_parameters_variables_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__
         )
 
-        for variable in self.variables:
-            variable.task = self.task                    
+        self.variable_types = [
+            {
+                'id': 'species concentrations/amounts'
+                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfSpecies',
+                'in': True,
+                'out': True,
+            },
+            {
+                'id': 'parameter values'
+                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfParameters',
+                'in': True,
+                'out': True,
+            },
+            {
+                'id': 'reaction fluxes'
+                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfReactions',
+                'in': False,
+                'out': True,
+            },
+            {
+                'id': 'compartment sizes'
+                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfCompartments',
+                'in': True,
+                'out': True,
+            },
+        ]
 
-        self.config = Config(
-            VALIDATE_SEDML=False,
-            VALIDATE_SEDML_MODELS=False,
-            LOG=False,
-        )
+        self.variables = {'__all__': []}
+        for variable_type in self.variable_types:
+            self.variables[variable_type['id']] = list(
+                filter(lambda var: var.target.startswith(variable_type['xpath_prefix']), all_variables))
+            self.variables['__all__'] += self.variables[variable_type['id']]
+
+        self.variable_id_target_map = {variable.id: variable.target for variable in self.variables['__all__']}
+
+        self.config = Config(LOG=False)
+
+        self.preprocessed_task = preprocess_sed_task(self.task, self.variables['__all__'], config=self.config)
 
     def ports_schema(self):
-        return {
-            'species concentrations': {
+        schema = {}
+        for variable_type in self.variable_types:
+            variables = self.variables[variable_type['id']]
+            schema[variable_type['id']] = {
                 variable.id: {
                     '_default': 0.0,
-                    '_updater': 'accumulate',
+                    '_updater': 'accumulate' if variable_type['in'] else None,
                     '_emit': True,
-                } for variable in self.variables
-                if variable.target and variable.target.startswith('/sbml:sbml/sbml:model/sbml:listOfSpecies')
-            },
-            'parameter values': {
-                variable: {
-                    '_default': 0.0,
-                    '_updater': 'accumulate',
-                    '_emit': True,
-                } for variable in self.variables
-                if variable.target and variable.target.startswith('/sbml:sbml/sbml:model/sbml:listOfParameters')
-            },
-            # 'reaction fluxes': {
-            #     reaction: {
-            #         '_default': 0.0,
-            #         '_updater': 'accumulate',
-            #         '_emit': True,
-            #     } for reaction in self.parameters['reactions']
-            # },
-            # 'compartment sizes': {
-            #     compartment: {
-            #         '_default': 0.0,
-            #         '_updater': 'accumulate',
-            #         '_emit': True,
-            #     } for compartment in self.parameters['compartment sizes']
-            # },
-        }
+                } for variable in variables
+            }
+        return schema
 
     def next_update(self, timestep, states):
-        values = states['species concentrations']
-        parameters = states['parameter values']
+        # set up model changes based on current state
+        self.task.changes = []
+        for variable_type in self.variable_types:
+            if variable_type['in']:
+                variable_states = states[variable_type['id']]
+                for variable_id, variable_value in variable_states.items():
+                    self.task.changes.append(ModelAttributeChange(
+                        target=self.variable_id_target_map[variable_id],
+                        new_value=variable_value,
+                    ))
 
-        # TODO -- implement model changes based on current state
-        # TODO -- use config to turn off logging
-        results, log = exec_sed_task(
+        # execute step
+        raw_results, log = exec_sed_task(
             self.task,
-            self.variables,
+            self.all_variables,
+            preprocessed_task=self.preprocessed_task,
             config=self.config,
         )
 
-        # TODO -- filter variables from results
+        # transform results
+        results = {}
+        for variable_type in self.variable_types:
+            variables = self.variables[variable_type['id']]
+            results[variable_type['id']] = {
+                variable.id: raw_results[variable.id][-1]
+                for variable in variables
+            }
 
-        return {
-            'species concentrations': results,
-        }
+        return results
 
 
 def test_tellurium_process():
