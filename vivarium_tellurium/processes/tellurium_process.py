@@ -45,25 +45,25 @@ class TelluriumProcess(Process):
 
         self.variable_types = [
             {
-                'id': 'species concentrations/amounts'
+                'id': 'species concentrations/amounts',
                 'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfSpecies',
                 'in': True,
                 'out': True,
             },
             {
-                'id': 'parameter values'
+                'id': 'parameter values',
                 'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfParameters',
                 'in': True,
                 'out': True,
             },
             {
-                'id': 'reaction fluxes'
+                'id': 'reaction fluxes',
                 'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfReactions',
                 'in': False,
                 'out': True,
             },
             {
-                'id': 'compartment sizes'
+                'id': 'compartment sizes',
                 'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfCompartments',
                 'in': True,
                 'out': True,
