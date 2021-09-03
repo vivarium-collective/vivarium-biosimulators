@@ -7,8 +7,8 @@ from vivarium.core.composition import simulate_process
 from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
-    Task, Algorithm, Variable, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
-from biosimulators_utils.model_lang.sbml.utils import get_parameters_variables_for_simulation
+    Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
+from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_simulation
 
 
 class TelluriumProcess(Process):
@@ -43,7 +43,8 @@ class TelluriumProcess(Process):
         (parameters, _, all_variables) = get_parameters_variables_for_simulation(
             model_filename=model.source,
             model_language=model.language,
-            simulation_type=simulation.__class__
+            simulation_type=simulation.__class__,
+            algorithm_kisao_id=simulation.algorithm.kisao_id,
         )
 
         self.variable_types = [
