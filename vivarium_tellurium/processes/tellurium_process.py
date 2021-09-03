@@ -1,6 +1,6 @@
-'''
+"""
 Execute by running: ``python vivarium_tellurium/process/tellurium_process.py``
-'''
+"""
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
