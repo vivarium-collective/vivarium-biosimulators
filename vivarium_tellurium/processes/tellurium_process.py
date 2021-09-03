@@ -7,7 +7,7 @@ from vivarium.core.composition import simulate_process
 from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
-    Task, Algorithm, Variable, Model, UniformTimeCourseSimulation, ModelLanguage)
+    Task, Algorithm, Variable, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
 from biosimulators_utils.model_lang.sbml.utils import get_parameters_variables_for_simulation
 
 
