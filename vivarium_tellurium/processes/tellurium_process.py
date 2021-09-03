@@ -95,7 +95,7 @@ class TelluriumProcess(Process):
             schema[variable_type['id']] = {
                 variable.id: {
                     '_default': 0.0,
-                    '_updater': 'accumulate' if variable_type['in'] else None,
+                    '_updater': 'accumulate' if variable_type['in'] else 'null',
                     '_emit': True,
                 } for variable in variables
             }
