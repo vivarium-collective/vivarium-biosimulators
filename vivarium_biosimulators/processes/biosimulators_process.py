@@ -102,7 +102,7 @@ class BiosimulatorsProcess(Process):
                 # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
                 self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
 
-    def initial_state(self, config):
+    def initial_state(self, config=None):
         return self.initial_model_state
 
     def ports_schema(self):
