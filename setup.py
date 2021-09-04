@@ -1,6 +1,6 @@
-import os
-import glob
-import setuptools
+# import os
+# import glob
+# import setuptools
 from distutils.core import setup
 
 with open("README.md", 'r') as readme:
@@ -28,9 +28,9 @@ setup(
     package_data={},
     include_package_data=True,
     install_requires=[
-        'vivarium-core>=0.3.4',        
-        'biosimulators-tellurium>=0.1.17',
-        'biosimulators-utils>=0.1.115',
+        'vivarium-core>=0.3.4',
+        'biosimulators-tellurium>=0.1.18',
+        'biosimulators-utils>=0.1.116',
     ],
     tests_require=[
         'pytest',
