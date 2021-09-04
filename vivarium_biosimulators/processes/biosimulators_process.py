@@ -1,5 +1,5 @@
 '''
-Execute by running: ``python vivarium_tellurium/process/tellurium_process.py``
+Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
 '''
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
@@ -11,7 +11,7 @@ from biosimulators_utils.sedml.data_model import (
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_simulation
 
 
-class TelluriumProcess(Process):
+class BiosimulatorsProcess(Process):
     defaults = {
         'sbml_path': '',
         'time_step': 1.,
@@ -135,11 +135,11 @@ class TelluriumProcess(Process):
         return results
 
 
-def test_tellurium_process():
+def test_biosimulators_process():
     parameters = {
-        'sbml_path': 'vivarium_tellurium/models/BIOMD0000000297_url.xml'
+        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
     }
-    process = TelluriumProcess(parameters)
+    process = BiosimulatorsProcess(parameters)
 
     # get the initial state
     initial_state = process.initial_state()
@@ -154,4 +154,4 @@ def test_tellurium_process():
 
 
 if __name__ == '__main__':
-    test_tellurium_process()
+    test_biosimulators_process()

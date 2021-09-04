@@ -7,14 +7,13 @@ with open("README.md", 'r') as readme:
     long_description = readme.read()
 
 setup(
-    name='',  # TODO: Put your package name here.
+    name='vivarium-biosimulators',
     version='0.0.1',
     packages=[
-        # TODO: Replace 'vivarium_tellurium' with the name of your folder.
-        'vivarium_tellurium',
-        'vivarium_tellurium.processes',
-        'vivarium_tellurium.composites',
-        'vivarium_tellurium.experiments',
+        'vivarium_biosimulators',
+        'vivarium_biosimulators.processes',
+        'vivarium_biosimulators.composites',
+        'vivarium_biosimulators.experiments',
     ],
     author='',  # TODO: Put your name here.
     author_email='',  # TODO: Put your email here.

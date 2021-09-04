@@ -1,4 +1,4 @@
-# Modified from GitHub Actions vivarium_tellurium
+# Modified from GitHub Actions vivarium_biosimulators
 
 name: Pytest
 
