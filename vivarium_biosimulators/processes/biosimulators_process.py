@@ -1,6 +1,8 @@
 '''
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
 '''
+import re
+
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
@@ -88,6 +90,20 @@ class BiosimulatorsProcess(Process):
         self.config = Config(LOG=False)
 
         self.preprocessed_task = preprocess_sed_task(self.task, self.variables['__all__'], config=self.config)
+
+        # extract initial state
+        self.initial_model_state = {
+            'species concentrations/amounts': {}
+        }
+        for parameter in parameters:
+            if parameter.target and parameter.target.endswith('@initialConcentration'):
+                # TODO -- there must be a better way to get the name
+                name = re.search('"(.*)"', parameter.name).group(1)
+                # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
+                self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
+
+    def initial_state(self, config):
+        return self.initial_model_state
 
     def ports_schema(self):
         schema = {}
