@@ -25,7 +25,7 @@ class BiosimulatorsProcess(Process):
         super().__init__(parameters)
 
         # import biosimulator modules
-        biosimulator = importlib.import_module(self.parameters['biosimulator_id'])
+        biosimulator = importlib.import_module(f"biosimulators_{self.parameters['biosimulator_id']}")
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
         self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
@@ -149,7 +149,7 @@ class BiosimulatorsProcess(Process):
 
 
 def test_biosimulators_process(
-        biosimulator_id='biosimulators_tellurium',
+        biosimulator_id='tellurium',
 ):
     config = {
         'biosimulator_id': biosimulator_id,
@@ -171,7 +171,7 @@ def test_biosimulators_process(
 
 def test_cobra_process():
         test_biosimulators_process(
-            biosimulator_id='biosimulators_cobrapy'
+            biosimulator_id='cobrapy'
         )
 
 
