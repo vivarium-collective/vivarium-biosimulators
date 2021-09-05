@@ -1,10 +1,12 @@
 '''
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
 '''
+import importlib
+
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
-from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
+# from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
@@ -13,12 +15,18 @@ from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_s
 
 class BiosimulatorsProcess(Process):
     defaults = {
+        'biosimulator': '',
         'sbml_path': '',
         'time_step': 1.,
     }
 
     def __init__(self, parameters=None):
         super().__init__(parameters)
+
+        # import biosimulator modules
+        biosimulator = importlib.import_module(f"{self.parameters['biosimulator']}.core")
+        self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
+        self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
         model = Model(
             id='model',
@@ -87,7 +95,11 @@ class BiosimulatorsProcess(Process):
 
         self.config = Config(LOG=False)
 
-        self.preprocessed_task = preprocess_sed_task(self.task, self.variables['__all__'], config=self.config)
+        self.preprocessed_task = self.preprocess_sed_task(
+            self.task,
+            self.variables['__all__'],
+            config=self.config,
+        )
 
     def ports_schema(self):
         schema = {}
@@ -116,7 +128,7 @@ class BiosimulatorsProcess(Process):
                         ))
 
         # execute step
-        raw_results, log = exec_sed_task(
+        raw_results, log = self.exec_sed_task(
             self.task,
             self.variables['__all__'],
             preprocessed_task=self.preprocessed_task,
@@ -136,10 +148,11 @@ class BiosimulatorsProcess(Process):
 
 
 def test_biosimulators_process():
-    parameters = {
-        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+    config = {
+        'biosimulator': 'biosimulators_tellurium',
+        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml',
     }
-    process = BiosimulatorsProcess(parameters)
+    process = BiosimulatorsProcess(config)
 
     # get the initial state
     initial_state = process.initial_state()
