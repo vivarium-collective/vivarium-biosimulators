@@ -7,6 +7,7 @@ from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 
 # from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
+# from biosimulators_cobrapy
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
@@ -15,7 +16,7 @@ from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_s
 
 class BiosimulatorsProcess(Process):
     defaults = {
-        'biosimulator': '',
+        'biosimulator_id': '',
         'sbml_path': '',
         'time_step': 1.,
     }
@@ -24,7 +25,7 @@ class BiosimulatorsProcess(Process):
         super().__init__(parameters)
 
         # import biosimulator modules
-        biosimulator = importlib.import_module(f"{self.parameters['biosimulator']}.core")
+        biosimulator = importlib.import_module(self.parameters['biosimulator_id'])
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
         self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
@@ -147,9 +148,11 @@ class BiosimulatorsProcess(Process):
         return results
 
 
-def test_biosimulators_process():
+def test_biosimulators_process(
+        biosimulator_id='biosimulators_tellurium',
+):
     config = {
-        'biosimulator': 'biosimulators_tellurium',
+        'biosimulator_id': biosimulator_id,
         'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml',
     }
     process = BiosimulatorsProcess(config)
@@ -166,5 +169,12 @@ def test_biosimulators_process():
     return output
 
 
+def test_cobra_process():
+        test_biosimulators_process(
+            biosimulator_id='biosimulators_cobrapy'
+        )
+
+
 if __name__ == '__main__':
-    test_biosimulators_process()
+    # test_biosimulators_process()
+    test_cobra_process()
