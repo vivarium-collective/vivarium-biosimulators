@@ -2,16 +2,28 @@
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
 '''
 import importlib
+import traceback
 
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
+from vivarium.core.control import run_library_cli
 
-# from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
-# from biosimulators_cobrapy
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
-from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_simulation
+from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
+
+
+# TODO (ERAN): automatically access the ids from BioSimulators
+BIOSIMULATOR_IDS = [
+    'tellurium',
+    'cobrapy',
+    'bionetgen',
+    'gillespy2',
+    'libsbmlsim',
+    'rbapy',
+    'xpp',
+]
 
 
 class BiosimulatorsProcess(Process):
@@ -49,7 +61,7 @@ class BiosimulatorsProcess(Process):
         )
 
         # extract variables from the model
-        (parameters, _, all_variables) = get_parameters_variables_for_simulation(
+        model_attributes, _, all_variables, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
@@ -163,18 +175,34 @@ def test_biosimulators_process(
     # run the simulation
     sim_settings = {
         'total_time': 10.,
-        'initial_state': initial_state}
+        'initial_state': initial_state,
+        'display_info': False,
+    }
     output = simulate_process(process, sim_settings)
 
     return output
 
 
-def test_cobra_process():
-        test_biosimulators_process(
-            biosimulator_id='cobrapy'
-        )
+
+def test_all_biosimulators():
+    for biosimulator_id in BIOSIMULATOR_IDS:
+        print(f'TESTING biosimulators_{biosimulator_id}')
+        try:
+            test_biosimulators_process(
+                biosimulator_id=biosimulator_id
+            )
+            print('...PASS!')
+        except:
+            print('...FAIL!')
+            traceback.print_exc()
 
 
+test_library = {
+    '0': test_biosimulators_process,
+    '1': test_all_biosimulators,
+}
+
+# run methods in test_library from the command line with:
+# python ecoli/processes/biosimulators_process.py -n [experiment id]
 if __name__ == '__main__':
-    # test_biosimulators_process()
-    test_cobra_process()
+    run_library_cli(test_library)
