@@ -1,4 +1,4 @@
-# Vivarium-Tellurium Project
+# Vivarium-BioSimulators Project
 
 Biosimulators Tellurium docs: https://docs.biosimulators.org/Biosimulators_tellurium/index.html
 Biosimulators Tellurium listing: https://biosimulators.org/simulators/tellurium/latest
