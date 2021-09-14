@@ -5,6 +5,7 @@ import importlib
 import traceback
 
 from vivarium.core.process import Process
+from vivarium.core.engine import pf
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import run_library_cli
 
@@ -25,6 +26,10 @@ BIOSIMULATOR_IDS = [
     'rbapy',
     'xpp',
 ]
+
+
+def get_delta(before, after):
+    return after - before
 
 
 class BiosimulatorsProcess(Process):
@@ -152,10 +157,13 @@ class BiosimulatorsProcess(Process):
         # transform results
         results = {}
         for variable_type in self.variable_types:
-            variables = self.variables[variable_type['id']]
+            variable_type_id = variable_type['id']
+            variables = self.variables[variable_type_id]
             if variables:
-                results[variable_type['id']] = {
-                    variable.id: raw_results[variable.id][-1]
+                results[variable_type_id] = {
+                    variable.id: get_delta(
+                        states[variable_type_id][variable.id],
+                        raw_results[variable.id][-1])
                     for variable in variables
                 }
         return results
@@ -181,7 +189,7 @@ def test_biosimulators_process(
     }
     output = simulate_process(process, sim_settings)
 
-    return output
+    print(pf(output))
 
 
 
