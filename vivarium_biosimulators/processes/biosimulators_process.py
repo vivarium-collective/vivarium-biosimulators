@@ -1,24 +1,46 @@
 '''
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
 '''
+import importlib
+import traceback
+
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
+from vivarium.core.control import run_library_cli
 
-from biosimulators_tellurium.core import exec_sed_task, preprocess_sed_task
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
-from biosimulators_utils.sedml.model_utils import get_parameters_variables_for_simulation
+from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
+
+
+# TODO (ERAN): automatically access the ids from BioSimulators
+# Python modules can be looked up at https://api.biosimulators.org/simulators/tellurium/2.2.0.
+BIOSIMULATOR_IDS = [
+    'tellurium',
+    'cobrapy',
+    'bionetgen',
+    'gillespy2',
+    'libsbmlsim',
+    'rbapy',
+    'xpp',
+]
 
 
 class BiosimulatorsProcess(Process):
     defaults = {
+        'biosimulator_id': '',
         'sbml_path': '',
         'time_step': 1.,
     }
 
     def __init__(self, parameters=None):
         super().__init__(parameters)
+
+        # import biosimulator modules
+        biosimulator = importlib.import_module(f"biosimulators_{self.parameters['biosimulator_id']}")
+        self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
+        self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
         model = Model(
             id='model',
@@ -40,7 +62,7 @@ class BiosimulatorsProcess(Process):
         )
 
         # extract variables from the model
-        (parameters, _, all_variables) = get_parameters_variables_for_simulation(
+        model_attributes, _, all_variables, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
@@ -87,7 +109,11 @@ class BiosimulatorsProcess(Process):
 
         self.config = Config(LOG=False)
 
-        self.preprocessed_task = preprocess_sed_task(self.task, self.variables['__all__'], config=self.config)
+        self.preprocessed_task = self.preprocess_sed_task(
+            self.task,
+            self.variables['__all__'],
+            config=self.config,
+        )
 
     def ports_schema(self):
         schema = {}
@@ -116,7 +142,7 @@ class BiosimulatorsProcess(Process):
                         ))
 
         # execute step
-        raw_results, log = exec_sed_task(
+        raw_results, log = self.exec_sed_task(
             self.task,
             self.variables['__all__'],
             preprocessed_task=self.preprocessed_task,
@@ -135,11 +161,14 @@ class BiosimulatorsProcess(Process):
         return results
 
 
-def test_biosimulators_process():
-    parameters = {
-        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+def test_biosimulators_process(
+        biosimulator_id='tellurium',
+):
+    config = {
+        'biosimulator_id': biosimulator_id,
+        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml',
     }
-    process = BiosimulatorsProcess(parameters)
+    process = BiosimulatorsProcess(config)
 
     # get the initial state
     initial_state = process.initial_state()
@@ -147,11 +176,34 @@ def test_biosimulators_process():
     # run the simulation
     sim_settings = {
         'total_time': 10.,
-        'initial_state': initial_state}
+        'initial_state': initial_state,
+        'display_info': False,
+    }
     output = simulate_process(process, sim_settings)
 
     return output
 
 
+
+def test_all_biosimulators():
+    for biosimulator_id in BIOSIMULATOR_IDS:
+        print(f'TESTING biosimulators_{biosimulator_id}')
+        try:
+            test_biosimulators_process(
+                biosimulator_id=biosimulator_id
+            )
+            print('...PASS!')
+        except:
+            print('...FAIL!')
+            traceback.print_exc()
+
+
+test_library = {
+    '0': test_biosimulators_process,
+    '1': test_all_biosimulators,
+}
+
+# run methods in test_library from the command line with:
+# python ecoli/processes/biosimulators_process.py -n [experiment id]
 if __name__ == '__main__':
-    test_biosimulators_process()
+    run_library_cli(test_library)
