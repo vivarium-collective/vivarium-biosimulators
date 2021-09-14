@@ -15,6 +15,7 @@ from biosimulators_utils.sedml.model_utils import get_parameters_variables_outpu
 
 
 # TODO (ERAN): automatically access the ids from BioSimulators
+# Python modules can be looked up at https://api.biosimulators.org/simulators/tellurium/2.2.0.
 BIOSIMULATOR_IDS = [
     'tellurium',
     'cobrapy',
