@@ -120,12 +120,13 @@ class BiosimulatorsProcess(Process):
         self.initial_model_state = {
             'species concentrations/amounts': {}
         }
-        for parameter in parameters:
+        for parameter in model_attributes:
             if parameter.target and parameter.target.endswith('@initialConcentration'):
                 # TODO -- there must be a better way to get the name
                 name = re.search('"(.*)"', parameter.name).group(1)
                 # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
                 self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
+
 
     def initial_state(self, config=None):
         return self.initial_model_state
