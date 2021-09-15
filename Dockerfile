@@ -6,5 +6,7 @@ COPY . /code
 WORKDIR /code
 
 # install dependencies
-RUN python -m pip install --upgrade pip
+RUN pip install --upgrade pip
 RUN pip install -r /code/requirements.txt
+
+CMD [ "python", "/code/vivarium_biosimulators/processes/biosimulators_process.py" ]
