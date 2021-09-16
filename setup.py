@@ -29,7 +29,7 @@ setup(
     install_requires=[
         'vivarium-core>=0.3.4',
         'biosimulators-utils>=0.1.119',
-        'biosimulators-tellurium',
+        # 'biosimulators-tellurium',
     ],
     tests_require=[
         'pytest',
