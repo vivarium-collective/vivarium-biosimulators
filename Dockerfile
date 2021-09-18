@@ -7,12 +7,12 @@ COPY . /app
 
 # install dependencies
 RUN pipenv run pip install -r requirements.txt
-RUN pipenv run pip install -r simulator_requirements.txt --upgrade
+RUN pipenv run pip install -r update_requirements.txt --upgrade
 
 # start mock up server for output
 # RUN pipenv run xvfb-startup.sh
 
 # command
 # "pipenv run python vivarium_biosimulators/processes/biosimulators_process.py"
-CMD ["pipenv", "run", "python", "vivarium_biosimulators/processes/biosimulators_process.py"]
+CMD ["pipenv", "run", "python", "vivarium_biosimulators/processes/biosimulators_process.py", "-n", "1"]
 
