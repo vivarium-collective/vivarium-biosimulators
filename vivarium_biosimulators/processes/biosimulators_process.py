@@ -49,17 +49,19 @@ class BiosimulatorsProcess(Process):
     def __init__(self, parameters=None):
         super().__init__(parameters)
 
-        # import biosimulator modules
+        # import biosimulator module
         biosimulator = importlib.import_module(self.parameters['biosimulator_api'])
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
         self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
+        # get the model
         model = Model(
             id='model',
             source=self.parameters['model_source'],
             language=self.parameters['model_language'],
         )
 
+        # get the simulation
         simulation = None
         if self.parameters['simulation'] == 'uniform_time_course':
             simulation = UniformTimeCourseSimulation(
@@ -72,7 +74,8 @@ class BiosimulatorsProcess(Process):
             )
         elif self.parameters['simulation'] == 'steady_state':
             simulation = SteadyStateSimulation()  # TODO -- set this up
-            
+
+        # make the task
         self.task = Task(
             id='task',
             model=model,
@@ -144,8 +147,6 @@ class BiosimulatorsProcess(Process):
                 # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
                 self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
 
-        # import ipdb; ipdb.set_trace()
-
     def initial_state(self, config=None):
         return self.initial_model_state
 
@@ -154,7 +155,7 @@ class BiosimulatorsProcess(Process):
             return True
         else:
             return False
-        
+
     def ports_schema(self):
         schema = {}
         for variable_type in self.variable_types:
@@ -169,7 +170,10 @@ class BiosimulatorsProcess(Process):
         return schema
 
     def next_update(self, timestep, states):
-        # set up model changes based on current state
+
+        # TODO (Eran) -- set the timestep in self.task
+
+        # update model based on current state
         self.task.changes = []
         for variable_type in self.variable_types:
             if variable_type['in']:
@@ -233,7 +237,7 @@ def test_biosimulators_process(
 
 def test_all_biosimulators():
     for biosimulator_api in BIOSIMULATOR_APIS:
-        print(f'TESTING biosimulators_{biosimulator_api}')
+        print(f'TESTING {biosimulator_api}')
         try:
             test_biosimulators_process(
                 biosimulator_api=biosimulator_api
@@ -250,6 +254,6 @@ test_library = {
 }
 
 # run methods in test_library from the command line with:
-# python ecoli/processes/biosimulators_process.py -n [experiment id]
+# python vivarium_biosimulators/processes/biosimulators_process.py -n [experiment id]
 if __name__ == '__main__':
     run_library_cli(test_library)
