@@ -17,7 +17,7 @@ setup(
     ],
     author='',  # TODO: Put your name here.
     author_email='',  # TODO: Put your email here.
-    url='',  # TODO: Put your project URL here.
+    url='https://github.com/vivarium-collective/vivarium-biosimulators',
     license='',  # TODO: Choose a license.
     entry_points={
         'console_scripts': []},
@@ -28,13 +28,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'vivarium-core>=0.3.4',
-        'biosimulators-tellurium>=0.1.20',
-        'biosimulators-cobrapy>=0.1.15',
-        'biosimulators-bionetgen>=0.1.15',
-        'biosimulators-gillespy2>=0.1.33',
-        'biosimulators-libsbmlsim>=0.0.4',
-        'biosimulators-rbapy>=0.0.3',
-        'biosimulators-xpp>=0.0.7',
         'biosimulators-utils>=0.1.119',
     ],
     tests_require=[

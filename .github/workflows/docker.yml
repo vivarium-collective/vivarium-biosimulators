@@ -1,0 +1,21 @@
+# https://github.com/biosimulators/Biosimulators_RBApy/blob/b59f5ecc3c675ebeb10c2924293d10585b2a777e/.github/workflows/ci.yml#L126
+name: Docker
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Make Docker image
+      run: |
+        docker build -t biosimulator-image .
+    - name: Run Docker
+      run: |
+        docker run biosimulator-image

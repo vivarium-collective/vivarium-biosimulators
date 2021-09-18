@@ -1,31 +1,19 @@
-'''
+"""
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
-'''
+"""
+import re
 import importlib
-import traceback
 
 from vivarium.core.process import Process
-from vivarium.core.engine import pf
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import run_library_cli
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
-    Task, Algorithm, Model, ModelAttributeChange, UniformTimeCourseSimulation, ModelLanguage)
+    Task, Algorithm, Model, ModelAttributeChange, 
+    UniformTimeCourseSimulation, SteadyStateSimulation, ModelLanguage
+)
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
-
-
-# TODO (ERAN): automatically access the ids from BioSimulators
-# Python modules can be looked up at https://api.biosimulators.org/simulators/tellurium/2.2.0.
-BIOSIMULATOR_IDS = [
-    'tellurium',
-    'cobrapy',
-    'bionetgen',
-    'gillespy2',
-    'libsbmlsim',
-    'rbapy',
-    'xpp',
-]
 
 
 def get_delta(before, after):
@@ -33,33 +21,46 @@ def get_delta(before, after):
 
 
 class BiosimulatorsProcess(Process):
+    
     defaults = {
-        'biosimulator_id': '',
-        'sbml_path': '',
+        'biosimulator_api': '',
+        'model_source': '',
+        'model_language': '',
+        'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
         'time_step': 1.,
+        'ports': {},  # TODO -- use this to configure custom ports
     }
 
     def __init__(self, parameters=None):
         super().__init__(parameters)
 
-        # import biosimulator modules
-        biosimulator = importlib.import_module(f"biosimulators_{self.parameters['biosimulator_id']}")
+        # import biosimulator module
+        biosimulator = importlib.import_module(self.parameters['biosimulator_api'])
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
         self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
+        # get the model
         model = Model(
             id='model',
-            source=self.parameters['sbml_path'],
-            language=ModelLanguage.SBML.value,
+            source=self.parameters['model_source'],
+            language=self.parameters['model_language'],
         )
-        simulation = UniformTimeCourseSimulation(
-            id='simulation',
-            initial_time=0.,
-            output_start_time=0.,
-            number_of_points=1,
-            output_end_time=self.parameters['time_step'],
-            algorithm=Algorithm(kisao_id='KISAO_0000019'),
-        )
+
+        # get the simulation
+        simulation = None
+        if self.parameters['simulation'] == 'uniform_time_course':
+            simulation = UniformTimeCourseSimulation(
+                id='simulation',
+                initial_time=0.,
+                output_start_time=0.,
+                number_of_points=1,
+                output_end_time=self.parameters['time_step'],
+                algorithm=Algorithm(kisao_id='KISAO_0000019'),
+            )
+        elif self.parameters['simulation'] == 'steady_state':
+            simulation = SteadyStateSimulation()  # TODO -- set this up
+
+        # make the task
         self.task = Task(
             id='task',
             model=model,
@@ -120,6 +121,26 @@ class BiosimulatorsProcess(Process):
             config=self.config,
         )
 
+       # extract initial state
+        self.initial_model_state = {
+            'species concentrations/amounts': {}
+        }
+        for parameter in model_attributes:
+            if parameter.target and parameter.target.endswith('@initialConcentration'):
+                # TODO -- there must be a better way to get the name
+                name = re.search('"(.*)"', parameter.name).group(1)
+                # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
+                self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
+
+    def initial_state(self, config=None):
+        return self.initial_model_state
+
+    def is_deriver(self):
+        if self.parameters['simulation'] == 'one_step':
+            return True
+        else:
+            return False
+
     def ports_schema(self):
         schema = {}
         for variable_type in self.variable_types:
@@ -134,7 +155,10 @@ class BiosimulatorsProcess(Process):
         return schema
 
     def next_update(self, timestep, states):
-        # set up model changes based on current state
+
+        # TODO (Eran) -- set the timestep in self.task
+
+        # update model based on current state
         self.task.changes = []
         for variable_type in self.variable_types:
             if variable_type['in']:
@@ -169,49 +193,37 @@ class BiosimulatorsProcess(Process):
         return results
 
 
+
 def test_biosimulators_process(
-        biosimulator_id='tellurium',
+        biosimulator_api='biosimulators_tellurium',
+        model_source='vivarium_biosimulators/models/BIOMD0000000297_url.xml',
+        model_language=ModelLanguage.SBML.value,
+        simulation='uniform_time_course',
 ):
     config = {
-        'biosimulator_id': biosimulator_id,
-        'sbml_path': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml',
+        'biosimulator_api': biosimulator_api,
+        'model_source': model_source,
+        'model_language':  model_language,
+        'simulation': simulation,
     }
     process = BiosimulatorsProcess(config)
-
-    # get the initial state
-    initial_state = process.initial_state()
 
     # run the simulation
     sim_settings = {
         'total_time': 10.,
-        'initial_state': initial_state,
-        'display_info': False,
-    }
+        'initial_state': process.initial_state(),
+        'display_info': False}
     output = simulate_process(process, sim_settings)
 
-    print(pf(output))
-
-
-
-def test_all_biosimulators():
-    for biosimulator_id in BIOSIMULATOR_IDS:
-        print(f'TESTING biosimulators_{biosimulator_id}')
-        try:
-            test_biosimulators_process(
-                biosimulator_id=biosimulator_id
-            )
-            print('...PASS!')
-        except:
-            print('...FAIL!')
-            traceback.print_exc()
+    # print(pf(output))
+    return output
 
 
 test_library = {
     '0': test_biosimulators_process,
-    '1': test_all_biosimulators,
 }
 
 # run methods in test_library from the command line with:
-# python ecoli/processes/biosimulators_process.py -n [experiment id]
+# python vivarium_biosimulators/processes/biosimulators_process.py -n [experiment id]
 if __name__ == '__main__':
     run_library_cli(test_library)
