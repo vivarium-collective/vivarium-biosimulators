@@ -2,7 +2,7 @@ import traceback
 
 from biosimulators_utils.sedml.data_model import ModelLanguage
 
-from vivarium_biosimulators.processes.biosimulators_process import SBML_MODEL_PATH, test_biosimulators_process
+from vivarium_biosimulators.processes.biosimulators_process import test_biosimulators_process
 
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
