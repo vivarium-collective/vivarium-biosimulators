@@ -1,4 +1,9 @@
 # Vivarium-BioSimulators Project
 
-Biosimulators Tellurium docs: https://docs.biosimulators.org/Biosimulators_tellurium/index.html
-Biosimulators Tellurium listing: https://biosimulators.org/simulators/tellurium/latest
+The aim of this project to build a general Vivarium process that can wrap around any BioSimulator.
+This will allow models compatible with BioSimulators to wire together into integrative, multiscale
+simulations.
+
+BioSimulators home page: https://biosimulators.org
+BioSimulators GitHub: https://github.com/biosimulators/Biosimulators
+Vivarium-core GitHub: https://github.com/vivarium-collective/vivarium-core
