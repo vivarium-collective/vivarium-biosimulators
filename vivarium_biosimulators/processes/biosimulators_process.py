@@ -3,10 +3,8 @@ Execute by running: ``python vivarium_biosimulators/processes/biosimulators_proc
 """
 import re
 import importlib
-import traceback
 
 from vivarium.core.process import Process
-from vivarium.core.engine import pf
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import run_library_cli
 
@@ -195,11 +193,10 @@ class BiosimulatorsProcess(Process):
         return results
 
 
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 
 def test_biosimulators_process(
         biosimulator_api='biosimulators_tellurium',
-        model_source=SBML_MODEL_PATH,
+        model_source='vivarium_biosimulators/models/BIOMD0000000297_url.xml',
         model_language=ModelLanguage.SBML.value,
         simulation='uniform_time_course',
 ):
@@ -211,77 +208,19 @@ def test_biosimulators_process(
     }
     process = BiosimulatorsProcess(config)
 
-    # get the initial state
-    initial_state = process.initial_state()
-
     # run the simulation
     sim_settings = {
         'total_time': 10.,
-        'initial_state': initial_state,
-        'display_info': False,
-    }
+        'initial_state': process.initial_state(),
+        'display_info': False}
     output = simulate_process(process, sim_settings)
 
     # print(pf(output))
     return output
 
 
-# TODO (ERAN): automatically access the ids from BioSimulators
-# Python modules can be looked up at https://api.biosimulators.org/simulators/tellurium/2.2.0
-BIOSIMULATOR_SPECS = [
-    {
-        'api': 'biosimulators_tellurium',
-        'model_source': SBML_MODEL_PATH,
-        'model_language': ModelLanguage.SBML.value,
-        'simulation': 'uniform_time_course',
-    },
-    {
-        'api': 'biosimulators_cobrapy',
-        'simulation': 'steady_state',
-    },
-    {
-        'api': 'biosimulators_bionetgen',
-        'model_language': ModelLanguage.BNGL.value,
-    },
-    {
-        'api': 'biosimulators_gillespy2',
-    },
-    {
-        'api': 'biosimulators_libsbmlsim',
-    },
-    {
-        'api': 'biosimulators_rbapy',
-    },
-    {
-        'api': 'biosimulators_xpp',
-        'model_language': ModelLanguage.XPP.value,
-    },
-]
-
-def test_all_biosimulators():
-    for spec in BIOSIMULATOR_SPECS:
-        biosimulator_api = spec['api']
-        model_language = spec.get('model_language', ModelLanguage.SBML.value)
-        model_source = spec.get('model_source', SBML_MODEL_PATH)
-        simulation = spec.get('simulation', 'uniform_time_course')
-
-        print(f'TESTING {biosimulator_api}')
-        try:
-            test_biosimulators_process(
-                biosimulator_api=biosimulator_api,
-                model_language=model_language,
-                model_source=model_source,
-                simulation=simulation,
-            )
-            print('...PASS!')
-        except:
-            print('...FAIL!')
-            traceback.print_exc()
-
-
 test_library = {
     '0': test_biosimulators_process,
-    '1': test_all_biosimulators,
 }
 
 # run methods in test_library from the command line with:

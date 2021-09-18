@@ -13,6 +13,4 @@ RUN pipenv run pip install -r update_requirements.txt --upgrade
 # RUN pipenv run xvfb-startup.sh
 
 # command
-# "pipenv run python vivarium_biosimulators/processes/biosimulators_process.py"
-CMD ["pipenv", "run", "python", "vivarium_biosimulators/processes/biosimulators_process.py", "-n", "1"]
-
+CMD ["pipenv", "run", "python", "vivarium_biosimulators/experiments/test_biosimulators.py"]
