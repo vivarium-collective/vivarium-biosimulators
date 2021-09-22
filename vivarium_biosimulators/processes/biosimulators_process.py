@@ -1,5 +1,7 @@
 """
 Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
+
+KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 """
 import re
 import importlib
@@ -28,7 +30,6 @@ class BiosimulatorsProcess(Process):
         'model_language': '',
         'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
         'time_step': 1.,
-        'ports': {},  # TODO -- use this to configure custom ports
     }
 
     def __init__(self, parameters=None):
@@ -58,7 +59,10 @@ class BiosimulatorsProcess(Process):
                 algorithm=Algorithm(kisao_id='KISAO_0000019'),
             )
         elif self.parameters['simulation'] == 'steady_state':
-            simulation = SteadyStateSimulation()  # TODO -- set this up
+            simulation = SteadyStateSimulation(
+                id='simulation',
+                algorithm=Algorithm(kisao_id='KISAO_0000437'),
+            )
 
         # make the task
         self.task = Task(
@@ -68,7 +72,7 @@ class BiosimulatorsProcess(Process):
         )
 
         # extract variables from the model
-        model_attributes, _, all_variables, _ = get_parameters_variables_outputs_for_simulation(
+        inputs, _, outputs, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
@@ -104,7 +108,7 @@ class BiosimulatorsProcess(Process):
 
         self.variables = {'__all__': []}
         for variable_type in self.variable_types:
-            variables = list(filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), all_variables))
+            variables = list(filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), outputs))
             self.variables[variable_type['id']] = variables
             self.variables['__all__'] += self.variables[variable_type['id']]
 
@@ -121,11 +125,12 @@ class BiosimulatorsProcess(Process):
             config=self.config,
         )
 
-       # extract initial state
+        # TODO -- get input variables by intersection between input/output state
+        # extract initial state
         self.initial_model_state = {
             'species concentrations/amounts': {}
         }
-        for parameter in model_attributes:
+        for parameter in inputs:
             if parameter.target and parameter.target.endswith('@initialConcentration'):
                 # TODO -- there must be a better way to get the name
                 name = re.search('"(.*)"', parameter.name).group(1)
@@ -142,7 +147,9 @@ class BiosimulatorsProcess(Process):
             return False
 
     def ports_schema(self):
-        schema = {}
+        schema = {
+            'global_time': {'_default': 0.}
+        }
         for variable_type in self.variable_types:
             variables = self.variables[variable_type['id']]
             schema[variable_type['id']] = {
@@ -150,13 +157,19 @@ class BiosimulatorsProcess(Process):
                     '_default': 0.0,
                     '_updater': 'accumulate' if variable_type['in'] else 'null',
                     '_emit': True,
+                    '_properties': {
+                        'input': variables.get('in'),
+                        'output': variables.get('out')
+                    }
                 } for variable in variables
             }
         return schema
 
-    def next_update(self, timestep, states):
+    def next_update(self, interval, states):
 
         # TODO (Eran) -- set the timestep in self.task
+        # TODO -- get global time
+        global_time = states['global_time']
 
         # update model based on current state
         self.task.changes = []
@@ -169,6 +182,10 @@ class BiosimulatorsProcess(Process):
                             target=self.variable_id_target_map[variable_id],
                             new_value=variable_value,
                         ))
+        # set the simulation time
+        self.task.simulation.initial_time = global_time
+        self.task.simulation.output_start_time = global_time
+        self.task.simulation.output_end_time = global_time + interval
 
         # execute step
         raw_results, log = self.exec_sed_task(

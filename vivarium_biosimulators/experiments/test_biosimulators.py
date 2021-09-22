@@ -9,7 +9,7 @@ SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 
 
 # TODO (ERAN): automatically access the ids from BioSimulators
-# Python modules can be found at https://api.biosimulators.org/simulators/tellurium/2.2.0
+# Python modules can be found at https://api.biosimulators.org/simulators/
 BIOSIMULATOR_SPECS = [
     {
         'api': 'biosimulators_tellurium',
@@ -19,6 +19,10 @@ BIOSIMULATOR_SPECS = [
     },
     {
         'api': 'biosimulators_cobrapy',
+        'simulation': 'steady_state',
+    },
+    {
+        'api': 'biosimulators_cbmpy',
         'simulation': 'steady_state',
     },
     {
