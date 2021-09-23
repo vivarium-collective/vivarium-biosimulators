@@ -16,6 +16,8 @@ from biosimulators_utils.sedml.data_model import (
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 
+from biosimulators_tellurium import exec_sed_task, preprocess_sed_task
+
 
 def get_delta(before, after):
     return after - before
@@ -30,11 +32,6 @@ class TelluriumProcess(Process):
 
     def __init__(self, parameters=None):
         super().__init__(parameters)
-
-        # import biosimulator module
-        biosimulator = importlib.import_module('biosimulators_tellurium')
-        self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
-        self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
         # get the model
         model = Model(
@@ -109,7 +106,7 @@ class TelluriumProcess(Process):
 
         self.config = Config(LOG=False)
 
-        self.preprocessed_task = self.preprocess_sed_task(
+        self.preprocessed_task = preprocess_sed_task(
             self.task,
             self.variables['__all__'],
             config=self.config,
@@ -164,7 +161,7 @@ class TelluriumProcess(Process):
         self.task.simulation.output_end_time = global_time + interval
 
         # execute step
-        raw_results, log = self.exec_sed_task(
+        raw_results, log = exec_sed_task(
             self.task,
             self.variables['__all__'],
             preprocessed_task=self.preprocessed_task,

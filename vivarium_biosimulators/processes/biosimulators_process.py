@@ -80,13 +80,18 @@ class BiosimulatorsProcess(Process):
             algorithm_kisao_id=simulation.algorithm.kisao_id,
         )
 
-        self.variable_id_target_map = {}
+        # make an map of input ids to targets
+        self.input_id_target_map = {}
+        for variable in self.inputs:
+            self.input_id_target_map[variable.id] = variable.target
+
+        # assign outputs to task
         for variable in self.outputs:
             variable.task = self.task
-            self.variable_id_target_map[variable.id] = variable.target
 
         self.config = Config(LOG=False)
 
+        # preprocess
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
             self.outputs,
@@ -135,14 +140,13 @@ class BiosimulatorsProcess(Process):
     def next_update(self, interval, states):
 
         global_time = states['global_time']
-        input_variables = states['input']  # TODO -- set model inputs
-        output_variables = states['output']
+        input_variables = states['input']
 
-        # update model based on current state
+        # update model based on input state
         self.task.changes = []
-        for variable_id, variable_value in output_variables.items():
+        for variable_id, variable_value in input_variables.items():
             self.task.changes.append(ModelAttributeChange(
-                target=self.variable_id_target_map[variable_id],
+                target=self.input_id_target_map[variable_id],
                 new_value=variable_value,
             ))
 
@@ -222,7 +226,7 @@ def test_tellurium_process():
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     }
-    
+
     # get initial_state and topology mapping from a configured process
     process = BiosimulatorsProcess(config)
     initial_state = {}
