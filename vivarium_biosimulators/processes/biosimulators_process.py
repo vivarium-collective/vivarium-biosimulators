@@ -172,10 +172,12 @@ class BiosimulatorsProcess(Process):
 
 
 def test_biosimulators_process(
-        biosimulator_api='biosimulators_tellurium',
-        model_source='vivarium_biosimulators/models/BIOMD0000000297_url.xml',
+        biosimulator_api='',
+        model_source='',
         model_language=ModelLanguage.SBML.value,
         simulation='uniform_time_course',
+        initial_state=None,
+        input_output_map=None,
 ):
     import warnings; warnings.filterwarnings('ignore')
 
@@ -187,22 +189,63 @@ def test_biosimulators_process(
     }
     process = BiosimulatorsProcess(config)
 
+    # make a topology
+    topology = {
+        'global_time': ('global_time',),
+        'input': ('state',) if not input_output_map else {
+            **{'_path': ('state',)},
+            **input_output_map,
+        },
+        'output': ('state',)
+    }
+
     # get initial_state
-    initial_state = process.initial_state()
+    initial_model_state = {'state': initial_state} or process.initial_state()
 
     # run the simulation
     sim_settings = {
+        'topology': topology,
         'total_time': 10.,
-        'initial_state': initial_state,
+        'initial_state': initial_model_state,
         'display_info': False}
     output = simulate_process(process, sim_settings)
 
-    print(pf(output))
     return output
+
+
+def test_tellurium_process():
+    import warnings; warnings.filterwarnings('ignore')
+
+    config = {
+        'biosimulator_api': 'biosimulators_tellurium',
+        'model_source': 'vivarium_biosimulators/models/BIOMD0000000297_url.xml',
+        'model_language': ModelLanguage.SBML.value,
+        'simulation': 'uniform_time_course',
+    }
+    
+    # get initial_state and topology mapping from a configured process
+    process = BiosimulatorsProcess(config)
+    initial_state = {}
+    input_output_map = {}
+    for input_variable in process.inputs:
+        if input_variable.target and input_variable.target.endswith('@initialConcentration'):
+            input_name = input_variable.id
+            output_name = 'dynamics_species_' + re.search('"(.*)"', input_variable.name).group(1)
+            initial_state[output_name] = float(input_variable.new_value)
+            input_output_map[input_name] = (output_name,)
+
+    # run the biosimulators process
+    output = test_biosimulators_process(
+        input_output_map=input_output_map,
+        initial_state=initial_state,
+        **config
+    )
+    print(pf(output))
 
 
 test_library = {
     '0': test_biosimulators_process,
+    '1': test_tellurium_process,
 }
 
 # run methods in test_library from the command line with:
