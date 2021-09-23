@@ -6,6 +6,9 @@ from vivarium_biosimulators.processes.biosimulators_process import test_biosimul
 
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.json'
+XPP_MODEL_PATH = '../Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
+RBA_MODEL_PATH = '../Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
 
 
 # TODO (ERAN): automatically access the ids from BioSimulators
@@ -20,46 +23,57 @@ BIOSIMULATOR_SPECS = [
     },
     {
         'api': 'biosimulators_cobrapy',
+        'model_source': BIGG_MODEL_PATH,
+        'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
     },
     {
         'api': 'biosimulators_cbmpy',
+        'model_source': BIGG_MODEL_PATH,
+        'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
     },
     {
         'api': 'biosimulators_bionetgen',
         'model_language': ModelLanguage.BNGL.value,
+        'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_gillespy2',
+        'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_libsbmlsim',
+        'model_language': ModelLanguage.SBML.value,
+        'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_rbapy',
+        'model_source': RBA_MODEL_PATH,
+        'model_language': ModelLanguage.RBA.value,
+        'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_xpp',
+        'model_source': XPP_MODEL_PATH,
         'model_language': ModelLanguage.XPP.value,
+        'simulation': 'uniform_time_course',
     },
 ]
 
 
 def test_all_biosimulators():
+    import warnings; warnings.filterwarnings('ignore')
+
     for spec in BIOSIMULATOR_SPECS:
         biosimulator_api = spec['api']
-        model_language = spec.get('model_language', ModelLanguage.SBML.value)
-        model_source = spec.get('model_source', SBML_MODEL_PATH)
-        simulation = spec.get('simulation', 'uniform_time_course')
-
         print(f'TESTING {biosimulator_api}')
         try:
             test_biosimulators_process(
-                biosimulator_api=biosimulator_api,
-                model_language=model_language,
-                model_source=model_source,
-                simulation=simulation,
+                biosimulator_api=spec['api'],
+                model_language=spec['model_language'],
+                model_source=spec['model_source'],
+                simulation=spec['simulation'],
             )
             print('...PASS!')
         except:
