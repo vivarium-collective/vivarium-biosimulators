@@ -6,7 +6,7 @@ from vivarium_biosimulators.processes.biosimulators_process import test_biosimul
 
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
-BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.json'
+BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
 XPP_MODEL_PATH = '../Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
 RBA_MODEL_PATH = '../Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
 
@@ -35,15 +35,19 @@ BIOSIMULATOR_SPECS = [
     },
     {
         'api': 'biosimulators_bionetgen',
+        'model_source': '',  # add model
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_gillespy2',
+        'model_source': '',  # add model
+        'model_language': ModelLanguage.SBML.value,  # Is this correct?
         'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_libsbmlsim',
+        'model_source': '',  # add model
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },

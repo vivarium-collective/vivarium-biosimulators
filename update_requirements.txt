@@ -1,5 +1,6 @@
 biosimulators-tellurium
 biosimulators-cobrapy
+biosimulators-cbmpy
 biosimulators-bionetgen
 biosimulators-gillespy2
 biosimulators-libsbmlsim
