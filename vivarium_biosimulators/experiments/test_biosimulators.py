@@ -9,7 +9,7 @@ SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
 XPP_MODEL_PATH = 'Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
 RBA_MODEL_PATH = 'Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
-
+BNGL_MODEL_PATH = 'Biosimulators_test_suite/examples/bngl/Dolan-PLoS-Comput-Biol-2015-NHEJ/Dolan2015.bngl'
 
 # TODO (ERAN): automatically access the ids from BioSimulators
 # Python modules can be found at https://api.biosimulators.org/simulators/
@@ -35,19 +35,19 @@ BIOSIMULATOR_SPECS = [
     },
     {
         'api': 'biosimulators_bionetgen',
-        'model_source': '',  # add model
+        'model_source': BNGL_MODEL_PATH,
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_gillespy2',
-        'model_source': '',  # add model
-        'model_language': ModelLanguage.SBML.value,  # Is this correct?
+        'model_source': SBML_MODEL_PATH,
+        'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
         'api': 'biosimulators_libsbmlsim',
-        'model_source': '',  # add model
+        'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
