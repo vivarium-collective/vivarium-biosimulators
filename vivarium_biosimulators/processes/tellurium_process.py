@@ -1,7 +1,5 @@
 """
-Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
-
-KISAO: https://bioportal.bioontology.org/ontologies/KISAO
+Execute by running: ``python vivarium_biosimulators/processes/tellurium_process.py``
 """
 import re
 import importlib
@@ -9,11 +7,12 @@ import importlib
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import run_library_cli
+from vivarium.core.engine import pf
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, 
-    UniformTimeCourseSimulation, SteadyStateSimulation, ModelLanguage
+    UniformTimeCourseSimulation, ModelLanguage
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 
@@ -22,13 +21,10 @@ def get_delta(before, after):
     return after - before
 
 
-class BiosimulatorsProcess(Process):
+class TelluriumProcess(Process):
     
     defaults = {
-        'biosimulator_api': '',
         'model_source': '',
-        'model_language': '',
-        'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
         'time_step': 1.,
     }
 
@@ -36,7 +32,7 @@ class BiosimulatorsProcess(Process):
         super().__init__(parameters)
 
         # import biosimulator module
-        biosimulator = importlib.import_module(self.parameters['biosimulator_api'])
+        biosimulator = importlib.import_module('biosimulators_tellurium')
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
         self.preprocess_sed_task = getattr(biosimulator, 'preprocess_sed_task')
 
@@ -44,25 +40,18 @@ class BiosimulatorsProcess(Process):
         model = Model(
             id='model',
             source=self.parameters['model_source'],
-            language=self.parameters['model_language'],
+            language=ModelLanguage.SBML.value,
         )
 
         # get the simulation
-        simulation = None
-        if self.parameters['simulation'] == 'uniform_time_course':
-            simulation = UniformTimeCourseSimulation(
-                id='simulation',
-                initial_time=0.,
-                output_start_time=0.,
-                number_of_points=1,
-                output_end_time=self.parameters['time_step'],
-                algorithm=Algorithm(kisao_id='KISAO_0000019'),
-            )
-        elif self.parameters['simulation'] == 'steady_state':
-            simulation = SteadyStateSimulation(
-                id='simulation',
-                algorithm=Algorithm(kisao_id='KISAO_0000437'),
-            )
+        simulation = UniformTimeCourseSimulation(
+            id='simulation',
+            initial_time=0.,
+            output_start_time=0.,
+            number_of_points=1,
+            output_end_time=self.parameters['time_step'],
+            algorithm=Algorithm(kisao_id='KISAO_0000019'),
+        )
 
         # make the task
         self.task = Task(
@@ -125,7 +114,6 @@ class BiosimulatorsProcess(Process):
             config=self.config,
         )
 
-        # TODO -- get input variables by intersection between input/output state
         # extract initial state
         self.initial_model_state = {
             'species concentrations/amounts': {}
@@ -139,12 +127,6 @@ class BiosimulatorsProcess(Process):
 
     def initial_state(self, config=None):
         return self.initial_model_state
-
-    def is_deriver(self):
-        if self.parameters['simulation'] == 'one_step':
-            return True
-        else:
-            return False
 
     def ports_schema(self):
         schema = {
@@ -205,19 +187,13 @@ class BiosimulatorsProcess(Process):
 
 
 
-def test_biosimulators_process(
-        biosimulator_api='biosimulators_tellurium',
+def test_tellurium_process(
         model_source='vivarium_biosimulators/models/BIOMD0000000297_url.xml',
-        model_language=ModelLanguage.SBML.value,
-        simulation='uniform_time_course',
 ):
     config = {
-        'biosimulator_api': biosimulator_api,
         'model_source': model_source,
-        'model_language':  model_language,
-        'simulation': simulation,
     }
-    process = BiosimulatorsProcess(config)
+    process = TelluriumProcess(config)
 
     # run the simulation
     sim_settings = {
@@ -226,15 +202,15 @@ def test_biosimulators_process(
         'display_info': False}
     output = simulate_process(process, sim_settings)
 
-    # print(pf(output))
+    print(pf(output))
     return output
 
 
 test_library = {
-    '0': test_biosimulators_process,
+    '0': test_tellurium_process,
 }
 
 # run methods in test_library from the command line with:
-# python vivarium_biosimulators/processes/biosimulators_process.py -n [experiment id]
+# python vivarium_biosimulators/processes/tellurium_process.py -n [experiment id]
 if __name__ == '__main__':
     run_library_cli(test_library)
