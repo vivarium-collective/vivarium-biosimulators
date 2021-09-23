@@ -97,7 +97,8 @@ class TelluriumProcess(Process):
 
         self.variables = {'__all__': []}
         for variable_type in self.variable_types:
-            variables = list(filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), outputs))
+            variables = list(filter(
+                lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), outputs))
             self.variables[variable_type['id']] = variables
             self.variables['__all__'] += self.variables[variable_type['id']]
 
@@ -120,10 +121,9 @@ class TelluriumProcess(Process):
         }
         for parameter in inputs:
             if parameter.target and parameter.target.endswith('@initialConcentration'):
-                # TODO -- there must be a better way to get the name
                 name = re.search('"(.*)"', parameter.name).group(1)
-                # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
-                self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
+                self.initial_model_state[
+                    'species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
 
     def initial_state(self, config=None):
         return self.initial_model_state
@@ -190,6 +190,8 @@ class TelluriumProcess(Process):
 def test_tellurium_process(
         model_source='vivarium_biosimulators/models/BIOMD0000000297_url.xml',
 ):
+    import warnings; warnings.filterwarnings('ignore')
+    
     config = {
         'model_source': model_source,
     }

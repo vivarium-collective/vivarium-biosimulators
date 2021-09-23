@@ -9,6 +9,7 @@ import importlib
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import run_library_cli
+from vivarium.core.engine import pf
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
@@ -72,48 +73,15 @@ class BiosimulatorsProcess(Process):
         )
 
         # extract variables from the model
-        inputs, _, outputs, _ = get_parameters_variables_outputs_for_simulation(
+        self.inputs, _, self.outputs, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
         )
 
-        self.variable_types = [
-            {
-                'id': 'species concentrations/amounts',
-                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfSpecies',
-                'in': True,
-                'out': True,
-            },
-            {
-                'id': 'parameter values',
-                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfParameters',
-                'in': True,
-                'out': True,
-            },
-            {
-                'id': 'reaction fluxes',
-                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfReactions',
-                'in': False,
-                'out': True,
-            },
-            {
-                'id': 'compartment sizes',
-                'xpath_prefix': '/sbml:sbml/sbml:model/sbml:listOfCompartments',
-                'in': True,
-                'out': True,
-            },
-        ]
-
-        self.variables = {'__all__': []}
-        for variable_type in self.variable_types:
-            variables = list(filter(lambda var: var.target and var.target.startswith(variable_type['xpath_prefix']), outputs))
-            self.variables[variable_type['id']] = variables
-            self.variables['__all__'] += self.variables[variable_type['id']]
-
         self.variable_id_target_map = {}
-        for variable in self.variables['__all__']:
+        for variable in self.outputs:
             variable.task = self.task
             self.variable_id_target_map[variable.id] = variable.target
 
@@ -121,61 +89,63 @@ class BiosimulatorsProcess(Process):
 
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
-            self.variables['__all__'],
+            self.outputs,
             config=self.config,
         )
 
-        # TODO -- get input variables by intersection between input/output state
-        # extract initial state
-        self.initial_model_state = {
-            'species concentrations/amounts': {}
-        }
-        for parameter in inputs:
-            if parameter.target and parameter.target.endswith('@initialConcentration'):
-                # TODO -- there must be a better way to get the name
-                name = re.search('"(.*)"', parameter.name).group(1)
-                # TODO -- why is 'dynamic_species_` added to the start of the variables in the ports schema?
-                self.initial_model_state['species concentrations/amounts']['dynamics_species_' + name] = float(parameter.new_value)
-
     def initial_state(self, config=None):
-        return self.initial_model_state
+        # extract initial state
+        # TODO -- output states are 0 by default, need to extract them from self.outputs
+        initial_model_state = {
+            'input': {
+                input_state.id: input_state.new_value
+                for input_state in self.inputs
+            },
+            'output': {
+                output_state.id: 0
+                for output_state in self.outputs
+            }
+        }
+        return initial_model_state
 
     def is_deriver(self):
         if self.parameters['simulation'] == 'one_step':
             return True
-        else:
-            return False
+        return False
 
     def ports_schema(self):
         schema = {
-            'global_time': {'_default': 0.}
-        }
-        for variable_type in self.variable_types:
-            variables = self.variables[variable_type['id']]
-            schema[variable_type['id']] = {
-                variable.id: {
-                    '_default': 0.0,
-                    '_updater': 'accumulate' if variable_type['in'] else 'null',
+            'global_time': {'_default': 0.},
+            'input': {
+                input_state.id: {
+                    '_default': 0.,
+                    '_updater': 'accumulate'
+                } for input_state in self.inputs
+            },
+            'output': {
+                input_state.id: {
+                    '_default': 0.,
+                    '_updater': 'accumulate',
                     '_emit': True,
-                } for variable in variables
-            }
+                } for input_state in self.outputs
+            },
+        }
         return schema
 
     def next_update(self, interval, states):
 
         global_time = states['global_time']
+        input_variables = states['input']  # TODO -- set model inputs
+        output_variables = states['output']
 
         # update model based on current state
         self.task.changes = []
-        for variable_type in self.variable_types:
-            if variable_type['in']:
-                variable_states = states[variable_type['id']]
-                if variable_states:
-                    for variable_id, variable_value in variable_states.items():
-                        self.task.changes.append(ModelAttributeChange(
-                            target=self.variable_id_target_map[variable_id],
-                            new_value=variable_value,
-                        ))
+        for variable_id, variable_value in output_variables.items():
+            self.task.changes.append(ModelAttributeChange(
+                target=self.variable_id_target_map[variable_id],
+                new_value=variable_value,
+            ))
+
         # set the simulation time
         self.task.simulation.initial_time = global_time
         self.task.simulation.output_start_time = global_time
@@ -184,24 +154,20 @@ class BiosimulatorsProcess(Process):
         # execute step
         raw_results, log = self.exec_sed_task(
             self.task,
-            self.variables['__all__'],
+            self.outputs,
             preprocessed_task=self.preprocessed_task,
             config=self.config,
         )
 
         # transform results
-        results = {}
-        for variable_type in self.variable_types:
-            variable_type_id = variable_type['id']
-            variables = self.variables[variable_type_id]
-            if variables:
-                results[variable_type_id] = {
-                    variable.id: get_delta(
-                        states[variable_type_id][variable.id],
-                        raw_results[variable.id][-1])
-                    for variable in variables
-                }
-        return results
+        outputs = {
+            variable.id: get_delta(
+                states['output'][variable.id],
+                raw_results[variable.id][-1])
+            for variable in self.outputs
+        }
+        return {
+            'output': outputs}
 
 
 
@@ -211,6 +177,8 @@ def test_biosimulators_process(
         model_language=ModelLanguage.SBML.value,
         simulation='uniform_time_course',
 ):
+    import warnings; warnings.filterwarnings('ignore')
+
     config = {
         'biosimulator_api': biosimulator_api,
         'model_source': model_source,
@@ -219,14 +187,17 @@ def test_biosimulators_process(
     }
     process = BiosimulatorsProcess(config)
 
+    # get initial_state
+    initial_state = process.initial_state()
+
     # run the simulation
     sim_settings = {
         'total_time': 10.,
-        'initial_state': process.initial_state(),
+        'initial_state': initial_state,
         'display_info': False}
     output = simulate_process(process, sim_settings)
 
-    # print(pf(output))
+    print(pf(output))
     return output
 
 
