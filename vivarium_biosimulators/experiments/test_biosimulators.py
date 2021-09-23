@@ -1,14 +1,14 @@
 import traceback
 
+from vivarium.core.control import run_library_cli, Control
 from biosimulators_utils.sedml.data_model import ModelLanguage
-
 from vivarium_biosimulators.processes.biosimulators_process import test_biosimulators_process
 
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
-XPP_MODEL_PATH = '../Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
-RBA_MODEL_PATH = '../Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
+XPP_MODEL_PATH = 'Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
+RBA_MODEL_PATH = 'Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
 
 
 # TODO (ERAN): automatically access the ids from BioSimulators
@@ -66,11 +66,14 @@ BIOSIMULATOR_SPECS = [
 ]
 
 
-def test_all_biosimulators():
+def test_all_biosimulators(biosimulator_ids=None):
     import warnings; warnings.filterwarnings('ignore')
 
     for spec in BIOSIMULATOR_SPECS:
         biosimulator_api = spec['api']
+        if biosimulator_ids and biosimulator_api not in biosimulator_ids:
+            continue
+
         print(f'TESTING {biosimulator_api}')
         try:
             test_biosimulators_process(
@@ -84,5 +87,33 @@ def test_all_biosimulators():
             print('...FAIL!')
             traceback.print_exc()
 
+
+test_library = {
+    '0': test_all_biosimulators,
+}
+workflow_library = {
+    'all': {
+        'experiment': '0'
+    },
+    'tellurium': {
+        'experiment': {
+            'experiment_id': '0',
+            'biosimulator_ids': 'biosimulators_tellurium'
+        },
+    },
+    'cobra': {
+        'experiment': {
+            'experiment_id': '0',
+            'biosimulator_ids': 'biosimulators_cobrapy'
+        },
+    }
+}
+
+# run methods in workflow_library from the command line with:
+# python vivarium_biosimulators/experiments/test_biosimulators.py -w [workflow id]
 if __name__ == '__main__':
-    test_all_biosimulators()
+    Control(
+        experiments=test_library,
+        workflows=workflow_library,
+    )
+
