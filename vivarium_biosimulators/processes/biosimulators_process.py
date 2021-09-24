@@ -104,6 +104,7 @@ class BiosimulatorsProcess(Process):
         all_outputs = [output_state.id for output_state in self.outputs]
         remaining_inputs = copy.deepcopy(all_inputs)
         remaining_outputs = copy.deepcopy(all_outputs)
+
         self.port_assignments = {}
         if self.parameters['input_ports']:
             for port_id, variables in self.parameters['input_ports'].items():
@@ -112,13 +113,16 @@ class BiosimulatorsProcess(Process):
                         f"port assigments: {variable_id} is not in the inputs {all_inputs} "
                     remaining_inputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
+        self.port_assignments['inputs'] = remaining_inputs
+
+        if self.parameters['output_ports']:
             for port_id, variables in self.parameters['output_ports'].items():
                 for variable_id in variables:
                     assert variable_id in all_outputs, \
                         f"port assigments: {variable_id} is not in the outputs {all_outputs} "
                     remaining_outputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
-
+        self.port_assignments['outputs'] = remaining_outputs
 
     def initial_state(self, config=None):
         # extract initial state
