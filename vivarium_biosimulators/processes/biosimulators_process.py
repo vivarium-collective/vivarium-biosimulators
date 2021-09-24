@@ -4,6 +4,7 @@ Execute by running: ``python vivarium_biosimulators/processes/biosimulators_proc
 KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 """
 import importlib
+import copy
 
 from vivarium.core.process import Process
 from vivarium.core.composition import simulate_process
@@ -28,6 +29,8 @@ class BiosimulatorsProcess(Process):
         'model_source': '',
         'model_language': '',
         'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
+        'input_ports': None,
+        'output_ports': None,
         'time_step': 1.,
     }
 
@@ -95,6 +98,27 @@ class BiosimulatorsProcess(Process):
             self.outputs,
             config=self.config,
         )
+
+        # port assignments
+        all_inputs = [input_state.id for input_state in self.inputs]
+        all_outputs = [output_state.id for output_state in self.outputs]
+        remaining_inputs = copy.deepcopy(all_inputs)
+        remaining_outputs = copy.deepcopy(all_outputs)
+        self.port_assignments = {}
+        if self.parameters['input_ports']:
+            for port_id, variables in self.parameters['input_ports'].items():
+                for variable_id in variables:
+                    assert variable_id in all_inputs, \
+                        f"port assigments: {variable_id} is not in the inputs {all_inputs} "
+                    remaining_inputs.remove(variable_id)
+                self.port_assignments[port_id] = variables
+            for port_id, variables in self.parameters['output_ports'].items():
+                for variable_id in variables:
+                    assert variable_id in all_outputs, \
+                        f"port assigments: {variable_id} is not in the outputs {all_outputs} "
+                    remaining_outputs.remove(variable_id)
+                self.port_assignments[port_id] = variables
+
 
     def initial_state(self, config=None):
         # extract initial state
