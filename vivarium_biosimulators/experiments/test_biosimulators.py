@@ -55,7 +55,7 @@ BIOSIMULATOR_SPECS = [
         'api': 'biosimulators_rbapy',
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
-        'simulation': 'uniform_time_course',
+        'simulation': 'steady_state',
     },
     {
         'api': 'biosimulators_xpp',
