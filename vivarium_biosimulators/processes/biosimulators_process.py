@@ -28,12 +28,12 @@ class BiosimulatorsProcess(Process):
     parameters:
         - biosimulator_api (str): the name of the imported biosimulator api
         - model_source (str): a path to the model file
-        - model_source (str):
+        - model_language (str): the model language, select from biosimulators_utils.sedml.data_model.ModelLanguage
         - simulation (str): select from 'uniform_time_course', 'steady_state', 'one_step', 'analysis'
-        - input_ports (dict):
-        - output_ports (dict):
-        - default_input_port (str):
-        - default_output_port (str):
+        - input_ports (dict): a dictionary mapping {'input_port_name': ['list', 'of', 'variables']}
+        - output_ports (dict): a dictionary mapping {'output_port_name': ['list', 'of', 'variables']}
+        - default_input_port (str): the default input port name for variables not specified by input_ports
+        - default_output_port (str): the default output port name for variables not specified by output_ports
         - emit_ports (list): a list of the ports whose values are emitted
         - time_step (float): the syncronization time step
     """
