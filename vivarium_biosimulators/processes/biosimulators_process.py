@@ -31,6 +31,8 @@ class BiosimulatorsProcess(Process):
         'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
         'input_ports': None,
         'output_ports': None,
+        'default_input_port': 'inputs',
+        'default_output_port': 'outputs',
         'time_step': 1.,
     }
 
@@ -106,38 +108,61 @@ class BiosimulatorsProcess(Process):
         remaining_outputs = copy.deepcopy(all_outputs)
 
         self.port_assignments = {}
+        self.input_ports = []
+        self.output_ports = []
+
         if self.parameters['input_ports']:
             for port_id, variables in self.parameters['input_ports'].items():
+                if isinstance(variables, str):
+                    variables = [variables]
                 for variable_id in variables:
                     assert variable_id in all_inputs, \
                         f"port assigments: {variable_id} is not in the inputs {all_inputs} "
                     remaining_inputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
-        self.port_assignments['inputs'] = remaining_inputs
+                self.input_ports.append(port_id)
+
+        if remaining_inputs:
+            default_input_port_id = self.parameters['default_input_port']
+            self.port_assignments[default_input_port_id] = remaining_inputs
+            self.input_ports.append(default_input_port_id)
 
         if self.parameters['output_ports']:
             for port_id, variables in self.parameters['output_ports'].items():
+                if isinstance(variables, str):
+                    variables = [variables]
                 for variable_id in variables:
                     assert variable_id in all_outputs, \
                         f"port assigments: {variable_id} is not in the outputs {all_outputs} "
                     remaining_outputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
-        self.port_assignments['outputs'] = remaining_outputs
+                self.output_ports.append(port_id)
+
+        if remaining_outputs:
+            default_output_port_id = self.parameters['default_output_port']
+            self.port_assignments[default_output_port_id] = remaining_outputs
+            self.output_ports.append(default_output_port_id)
 
     def initial_state(self, config=None):
-        # extract initial state
+        """extract initial state according to port_assignments"""
         # TODO -- output states are 0 by default, need to extract them from self.outputs
-        initial_model_state = {
-            'input': {
-                input_state.id: input_state.new_value
-                for input_state in self.inputs
-            },
-            'output': {
-                output_state.id: 0
-                for output_state in self.outputs
-            }
-        }
-        return initial_model_state
+        initial_state = {}
+        input_values = {
+            input_state.id: input_state.new_value
+            for input_state in self.inputs}
+
+        for port_id, variables in self.port_assignments.items():
+            if port_id in self.input_ports:
+                initial_state[port_id] = {
+                    variable: input_values[variable]
+                    for variable in variables
+                }
+            elif port_id in self.output_ports:
+                initial_state[port_id] = {
+                    variable: 0
+                    for variable in variables
+                }
+        return initial_state
 
     def is_deriver(self):
         if self.parameters['simulation'] == 'one_step':
@@ -146,27 +171,29 @@ class BiosimulatorsProcess(Process):
 
     def ports_schema(self):
         schema = {
-            'global_time': {'_default': 0.},
-            'input': {
-                input_state.id: {
+            'global_time': {'_default': 0.}
+        }
+        for port_id, variables in self.port_assignments.items():
+            schema[port_id] = {
+                variable: {
                     '_default': 0.,
                     '_updater': 'accumulate'
-                } for input_state in self.inputs
-            },
-            'output': {
-                input_state.id: {
-                    '_default': 0.,
-                    '_updater': 'accumulate',
-                    '_emit': True,
-                } for input_state in self.outputs
-            },
-        }
+                } for variable in variables
+            }
         return schema
 
     def next_update(self, interval, states):
 
+        # get the inputs
         global_time = states['global_time']
-        input_variables = states['input']
+
+        import ipdb;
+        ipdb.set_trace()
+        # TODO -- get the biosimulators process to merge states back into inputs and outputs
+
+        input_variables = states[self.default_input_port]
+
+
 
         # update model based on input state
         self.task.changes = []

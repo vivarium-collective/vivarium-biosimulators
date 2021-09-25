@@ -16,49 +16,49 @@ BNGL_MODEL_PATH = 'Biosimulators_test_suite/examples/bngl/Dolan-PLoS-Comput-Biol
 # get example models from https://github.com/biosimulators/Biosimulators_test_suite/tree/dev/examples
 BIOSIMULATOR_SPECS = [
     {
-        'api': 'biosimulators_tellurium',
+        'biosimulator_api': 'biosimulators_tellurium',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_cobrapy',
+        'biosimulator_api': 'biosimulators_cobrapy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
     },
     {
-        'api': 'biosimulators_cbmpy',
+        'biosimulator_api': 'biosimulators_cbmpy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
     },
     {
-        'api': 'biosimulators_bionetgen',
+        'biosimulator_api': 'biosimulators_bionetgen',
         'model_source': BNGL_MODEL_PATH,
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_gillespy2',
+        'biosimulator_api': 'biosimulators_gillespy2',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_libsbmlsim',
+        'biosimulator_api': 'biosimulators_libsbmlsim',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_rbapy',
+        'biosimulator_api': 'biosimulators_rbapy',
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
         'simulation': 'steady_state',
     },
     {
-        'api': 'biosimulators_xpp',
+        'biosimulator_api': 'biosimulators_xpp',
         'model_source': XPP_MODEL_PATH,
         'model_language': ModelLanguage.XPP.value,
         'simulation': 'uniform_time_course',
@@ -70,14 +70,14 @@ def test_all_biosimulators(biosimulator_ids=None):
     import warnings; warnings.filterwarnings('ignore')
 
     for spec in BIOSIMULATOR_SPECS:
-        biosimulator_api = spec['api']
+        biosimulator_api = spec['biosimulator_api']
         if biosimulator_ids and biosimulator_api not in biosimulator_ids:
             continue
 
         print(f'TESTING {biosimulator_api}')
         try:
             test_biosimulators_process(
-                biosimulator_api=spec['api'],
+                biosimulator_api=spec['biosimulator_api'],
                 model_language=spec['model_language'],
                 model_source=spec['model_source'],
                 simulation=spec['simulation'],
