@@ -69,13 +69,11 @@ def test_tellurium_process(
     return output
 
 
-
-
 test_library = {
     '0': test_tellurium_process,
 }
 
 # run methods in test_library from the command line with:
-# python vivarium_biosimulators/processes/tellurium_process.py -n [experiment id]
+# python vivarium_biosimulators/experiments/tellurium_process.py -n [experiment id]
 if __name__ == '__main__':
     run_library_cli(test_library)

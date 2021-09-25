@@ -23,16 +23,31 @@ def get_delta(before, after):
 
 
 class BiosimulatorsProcess(Process):
+    """ A Vivarium wrapper for any BioSimulator
+
+    parameters:
+        - biosimulator_api (str): the name of the imported biosimulator api
+        - model_source (str): a path to the model file
+        - model_source (str):
+        - simulation (str): select from 'uniform_time_course', 'steady_state', 'one_step', 'analysis'
+        - input_ports (dict):
+        - output_ports (dict):
+        - default_input_port (str):
+        - default_output_port (str):
+        - emit_ports (list): a list of the ports whose values are emitted
+        - time_step (float): the syncronization time step
+    """
     
     defaults = {
         'biosimulator_api': '',
         'model_source': '',
         'model_language': '',
-        'simulation': 'uniform_time_course',  # uniform_time_course, steady_state, one_step, analysis
+        'simulation': 'uniform_time_course',
         'input_ports': None,
         'output_ports': None,
         'default_input_port': 'inputs',
         'default_output_port': 'outputs',
+        'emit_ports': ['outputs'],
         'time_step': 1.,
     }
 
@@ -94,7 +109,7 @@ class BiosimulatorsProcess(Process):
 
         self.config = Config(LOG=False)
 
-        # preprocess
+        # pre-process
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
             self.outputs,
@@ -144,8 +159,10 @@ class BiosimulatorsProcess(Process):
             self.output_ports.append(default_output_port_id)
 
     def initial_state(self, config=None):
-        """extract initial state according to port_assignments"""
-        # TODO -- output states are 0 by default, need to extract them from self.outputs
+        """extract initial state according to port_assignments
+
+        TODO -- output states are 0 by default, need to extract them from self.outputs
+        """
         initial_state = {}
         input_values = {
             input_state.id: input_state.new_value
@@ -174,28 +191,24 @@ class BiosimulatorsProcess(Process):
             'global_time': {'_default': 0.}
         }
         for port_id, variables in self.port_assignments.items():
+            emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
                 variable: {
                     '_default': 0.,
-                    '_updater': 'accumulate'
+                    '_updater': 'accumulate',
+                    '_emit': emit_port,
                 } for variable in variables
             }
         return schema
 
     def next_update(self, interval, states):
 
-        # get the inputs
-        global_time = states['global_time']
+        # collect the inputs
+        input_variables = {}
+        for port_id in self.input_ports:
+            input_variables.update(states[port_id])
 
-        import ipdb;
-        ipdb.set_trace()
-        # TODO -- get the biosimulators process to merge states back into inputs and outputs
-
-        input_variables = states[self.default_input_port]
-
-
-
-        # update model based on input state
+        # update model based on input
         self.task.changes = []
         for variable_id, variable_value in input_variables.items():
             self.task.changes.append(ModelAttributeChange(
@@ -204,6 +217,7 @@ class BiosimulatorsProcess(Process):
             ))
 
         # set the simulation time
+        global_time = states['global_time']
         self.task.simulation.initial_time = global_time
         self.task.simulation.output_start_time = global_time
         self.task.simulation.output_end_time = global_time + interval
@@ -217,15 +231,16 @@ class BiosimulatorsProcess(Process):
         )
 
         # transform results
-        outputs = {
-            variable.id: get_delta(
-                states['output'][variable.id],
-                raw_results[variable.id][-1])
-            for variable in self.outputs
-        }
-        return {
-            'output': outputs}
-
+        update = {}
+        for port_id in self.output_ports:
+            variable_ids = self.port_assignments[port_id]
+            update[port_id] = {
+                variable_id: get_delta(
+                    states[port_id][variable_id],
+                    raw_results[variable_id][-1])
+                for variable_id in variable_ids
+            }
+        return update
 
 
 def test_biosimulators_process(
