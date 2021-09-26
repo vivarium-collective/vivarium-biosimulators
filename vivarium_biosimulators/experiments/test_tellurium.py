@@ -11,7 +11,10 @@ SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 
 
 def tellurium_mapping(model_source):
-    # get initial_state and topology mapping from a configured process
+    """
+    get mapping of names between input and output ports
+    from a configured tellurium process
+    """
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
         'model_source': model_source,

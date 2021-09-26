@@ -242,9 +242,11 @@ class BiosimulatorProcess(Process):
             update[port_id] = {}
             variable_ids = self.port_assignments[port_id]
             for variable_id in variable_ids:
-                if isinstance(raw_results[variable_id], (list, np.ndarray)):
-                    value = raw_results[variable_id][-1]
+                raw_result = raw_results[variable_id]
+                if isinstance(raw_result, list) or (
+                        isinstance(raw_result, np.ndarray) and raw_result.size > 1):
+                    value = raw_result[-1]
                 else:
-                    value = raw_results[variable_id]
+                    value = raw_result
                 update[port_id][variable_id] = get_delta(states[port_id][variable_id], value)
         return update

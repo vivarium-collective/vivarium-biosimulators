@@ -36,6 +36,7 @@ def test_tellurium_cobrapy(
     ode_fba_composite = ODE_FBA(config).generate()
 
     # initial state
+    # TODO -- get initial state!
     initial_state = {}
 
     # run the simulation
