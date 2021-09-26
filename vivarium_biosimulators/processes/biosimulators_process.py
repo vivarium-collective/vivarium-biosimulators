@@ -7,13 +7,11 @@ import importlib
 import copy
 
 from vivarium.core.process import Process
-from vivarium.core.composition import simulate_process
-from vivarium.core.control import run_library_cli
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, 
-    UniformTimeCourseSimulation, SteadyStateSimulation, ModelLanguage
+    UniformTimeCourseSimulation, SteadyStateSimulation
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 
@@ -32,8 +30,8 @@ class BiosimulatorsProcess(Process):
         - simulation (str): select from 'uniform_time_course', 'steady_state', 'one_step', 'analysis'
         - input_ports (dict): a dictionary mapping {'input_port_name': ['list', 'of', 'variables']}
         - output_ports (dict): a dictionary mapping {'output_port_name': ['list', 'of', 'variables']}
-        - default_input_port (str): the default input port name for variables not specified by input_ports
-        - default_output_port (str): the default output port name for variables not specified by output_ports
+        - default_input_port_name (str): the default input port name for variables not specified by input_ports
+        - default_output_port_name (str): the default output port name for variables not specified by output_ports
         - emit_ports (list): a list of the ports whose values are emitted
         - time_step (float): the syncronization time step
     """
@@ -45,8 +43,10 @@ class BiosimulatorsProcess(Process):
         'simulation': 'uniform_time_course',
         'input_ports': None,
         'output_ports': None,
-        'default_input_port': 'inputs',
-        'default_output_port': 'outputs',
+        'default_input_port_name': 'inputs',
+        'default_output_port_name': 'outputs',
+        'default_input_value': 0.,
+        'default_output_value': 0.,
         'emit_ports': ['outputs'],
         'time_step': 1.,
     }
@@ -132,13 +132,13 @@ class BiosimulatorsProcess(Process):
                     variables = [variables]
                 for variable_id in variables:
                     assert variable_id in all_inputs, \
-                        f"port assigments: {variable_id} is not in the inputs {all_inputs} "
+                        f"port assigments: variable id '{variable_id}' is not in the available inputs:{all_inputs} "
                     remaining_inputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
                 self.input_ports.append(port_id)
 
         if remaining_inputs:
-            default_input_port_id = self.parameters['default_input_port']
+            default_input_port_id = self.parameters['default_input_port_name']
             self.port_assignments[default_input_port_id] = remaining_inputs
             self.input_ports.append(default_input_port_id)
 
@@ -148,22 +148,22 @@ class BiosimulatorsProcess(Process):
                     variables = [variables]
                 for variable_id in variables:
                     assert variable_id in all_outputs, \
-                        f"port assigments: {variable_id} is not in the outputs {all_outputs} "
+                        f"port assigments: variable id '{variable_id}' is not in the available outputs: {all_outputs} "
                     remaining_outputs.remove(variable_id)
                 self.port_assignments[port_id] = variables
                 self.output_ports.append(port_id)
 
         if remaining_outputs:
-            default_output_port_id = self.parameters['default_output_port']
+            default_output_port_id = self.parameters['default_output_port_name']
             self.port_assignments[default_output_port_id] = remaining_outputs
             self.output_ports.append(default_output_port_id)
 
     def initial_state(self, config=None):
         """extract initial state according to port_assignments
-
-        TODO -- output states are 0 by default, need to extract them from self.outputs
         """
-        initial_state = {}
+        initial_state = {
+            'global_time': 0
+        }
         input_values = {
             input_state.id: input_state.new_value
             for input_state in self.inputs}
@@ -176,7 +176,7 @@ class BiosimulatorsProcess(Process):
                 }
             elif port_id in self.output_ports:
                 initial_state[port_id] = {
-                    variable: 0
+                    variable: self.parameters['default_output_value']
                     for variable in variables
                 }
         return initial_state
@@ -194,7 +194,7 @@ class BiosimulatorsProcess(Process):
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
                 variable: {
-                    '_default': 0.,
+                    '_default': self.parameters['default_output_value'] if port_id in self.output_ports else self.parameters['default_input_value'],
                     '_updater': 'accumulate',
                     '_emit': emit_port,
                 } for variable in variables
@@ -231,67 +231,15 @@ class BiosimulatorsProcess(Process):
         )
 
         # transform results
+        # TODO(Eran) -- support custom transform methods?
         update = {}
         for port_id in self.output_ports:
+            update[port_id] = {}
             variable_ids = self.port_assignments[port_id]
-            update[port_id] = {
-                variable_id: get_delta(
-                    states[port_id][variable_id],
-                    raw_results[variable_id][-1])
-                for variable_id in variable_ids
-            }
+            for variable_id in variable_ids:
+                if isinstance(raw_results[variable_id], list):
+                    value = raw_results[variable_id][-1]
+                else:
+                    value = raw_results[variable_id]
+                update[port_id][variable_id] = get_delta(states[port_id][variable_id], value)
         return update
-
-
-def test_biosimulators_process(
-        biosimulator_api='',
-        model_source='',
-        model_language=ModelLanguage.SBML.value,
-        simulation='uniform_time_course',
-        initial_state=None,
-        input_output_map=None,
-        total_time=10.,
-):
-    import warnings; warnings.filterwarnings('ignore')
-
-    config = {
-        'biosimulator_api': biosimulator_api,
-        'model_source': model_source,
-        'model_language':  model_language,
-        'simulation': simulation,
-    }
-    process = BiosimulatorsProcess(config)
-
-    # make a topology
-    topology = {
-        'global_time': ('global_time',),
-        'input': ('state',) if not input_output_map else {
-            **{'_path': ('state',)},
-            **input_output_map,
-        },
-        'output': ('state',)
-    }
-
-    # get initial_state
-    initial_state = initial_state or {}
-    initial_model_state = {'state': initial_state} or process.initial_state()
-
-    # run the simulation
-    sim_settings = {
-        'topology': topology,
-        'total_time': total_time,
-        'initial_state': initial_model_state,
-        'display_info': False}
-    output = simulate_process(process, sim_settings)
-
-    return output
-
-
-test_library = {
-    '0': test_biosimulators_process,
-}
-
-# run methods in test_library from the command line with:
-# python vivarium_biosimulators/processes/biosimulators_process.py -n [experiment id]
-if __name__ == '__main__':
-    run_library_cli(test_library)

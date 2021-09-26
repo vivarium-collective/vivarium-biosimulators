@@ -11,8 +11,14 @@ from vivarium.core.engine import pf
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
 
 
-def tellurium_mapping(config):
+def tellurium_mapping(model_source):
     # get initial_state and topology mapping from a configured process
+    config = {
+        'biosimulator_api': 'biosimulators_tellurium',
+        'model_source': model_source,
+        'model_language': ModelLanguage.SBML.value,
+        'simulation': 'uniform_time_course',
+    }
     process = BiosimulatorsProcess(config)
     initial_state = {}
     input_output_map = {}
@@ -31,17 +37,14 @@ def test_tellurium_process(
 ):
     import warnings; warnings.filterwarnings('ignore')
 
+    # update ports based on input_output_map
+    initial_state, input_output_map = tellurium_mapping(model_source)
+    input_variable_names = list(input_output_map.keys())
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
         'model_source': model_source,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
-    }
-
-    # update ports based on input_output_map
-    initial_state, input_output_map = tellurium_mapping(config)
-    input_variable_names = list(input_output_map.keys())
-    config.update({
         'input_ports': {
             'concentrations': input_variable_names,
             'size': 'init_size_compartment_compartment',
@@ -49,7 +52,7 @@ def test_tellurium_process(
         'output_ports': {
             'time': 'time'
         }
-    })
+    }
     
     # make the process
     process = BiosimulatorsProcess(config)
@@ -57,6 +60,10 @@ def test_tellurium_process(
     # assert that port_assignment works
     process_initial_state = process.initial_state()
     assert list(process_initial_state['concentrations'].keys()) == input_variable_names
+
+    # test a process update
+    update = process.next_update(1, process_initial_state)
+    # TODO(ERAN) -- add an assert
 
     # run the simulation
     sim_settings = {
@@ -66,7 +73,6 @@ def test_tellurium_process(
     output = simulate_process(process, sim_settings)
 
     print(pf(output))
-    return output
 
 
 test_library = {
