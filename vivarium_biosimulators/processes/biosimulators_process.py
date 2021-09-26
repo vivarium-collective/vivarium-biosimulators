@@ -1,8 +1,11 @@
 """
-Execute by running: ``python vivarium_biosimulators/processes/biosimulators_process.py``
+====================
+BioSimulator Process
+====================
 
 KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 """
+
 import importlib
 import copy
 

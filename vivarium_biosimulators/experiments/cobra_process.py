@@ -6,7 +6,6 @@ import numpy as np
 from biosimulators_utils.sedml.data_model import ModelLanguage
 from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
 from vivarium.core.composition import simulate_process
-from vivarium.core.control import run_library_cli
 from vivarium.core.engine import pf
 
 
@@ -47,11 +46,5 @@ def test_cobra_process(
     print(pf(output))
 
 
-test_library = {
-    '0': test_cobra_process,
-}
-
-# run methods in test_library from the command line with:
-# python vivarium_biosimulators/experiments/cobra_process.py -n [experiment id]
 if __name__ == '__main__':
-    run_library_cli(test_library)
+    test_cobra_process()
