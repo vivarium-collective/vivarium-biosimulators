@@ -1,7 +1,6 @@
 """
 Execute by running: ``python vivarium_biosimulators/processes/cobra_process.py``
 """
-import re
 import numpy as np
 from biosimulators_utils.sedml.data_model import ModelLanguage
 from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
