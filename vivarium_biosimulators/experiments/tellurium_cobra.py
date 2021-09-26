@@ -12,7 +12,7 @@ BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
 def test_tellurium_cobrapy(
         tellurium_model=SBML_MODEL_PATH,
         cobra_model=BIGG_MODEL_PATH,
-        total_time=10.,
+        total_time=2.,
 ):
     import warnings;
     warnings.filterwarnings('ignore')
@@ -46,10 +46,10 @@ def test_tellurium_cobrapy(
     output = simulate_composite(ode_fba_composite, sim_settings)
 
     print(pf(output))
-
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
 
 # run with python vivarium_biosimulators/experiments/tellurium_cobra.py
 if __name__ == '__main__':
     test_tellurium_cobrapy()
+    

@@ -4,11 +4,30 @@ ODE FBA Composite
 =================
 """
 
+from vivarium.core.process import Deriver
 from vivarium.core.composer import Composer
-from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
+from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+
+
+class FluxBoundsConverter(Deriver):
+    """Converts fluxes from ode simulator to flux bounds for fba simulator"""
+    defaults = {}
+    def __init__(self, parameters=None):
+        super().__init__(parameters)
+    def ports_schema(self):
+        return {}
+    def next_update(self, timestep, states):
+        return {}
 
 
 class ODE_FBA(Composer):
+    """Makes ODE/FBA Composite
+
+    Config options:
+        - ode_config (dict):
+        - fba_config (dict):
+        - flux_map (dict):
+    """
     defaults = {
         'ode_config': {},
         'fba_config': {},
@@ -19,8 +38,8 @@ class ODE_FBA(Composer):
 
     def generate_processes(self, config):
         return {
-            'ode_process': BiosimulatorsProcess(config['ode_config']),
-            'fba_process': BiosimulatorsProcess(config['fba_config']),
+            'ode_process': BiosimulatorProcess(config['ode_config']),
+            'fba_process': BiosimulatorProcess(config['fba_config']),
         }
 
     def generate_topology(self, config):

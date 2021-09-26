@@ -3,7 +3,7 @@ Execute by running: ``python vivarium_biosimulators/processes/test_cobra.py``
 """
 import numpy as np
 from biosimulators_utils.sedml.data_model import ModelLanguage
-from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
+from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium.core.composition import simulate_process
 from vivarium.core.engine import pf
 
@@ -26,7 +26,7 @@ def test_cobra_process(
     }
 
     # make the process
-    process = BiosimulatorsProcess(config)
+    process = BiosimulatorProcess(config)
 
     # get initial state
     process_initial_state = process.initial_state()
@@ -37,7 +37,7 @@ def test_cobra_process(
 
     # run the simulation
     sim_settings = {
-        'total_time': 10.,
+        'total_time': 2.,
         'initial_state': process_initial_state,
         'display_info': False}
     output = simulate_process(process, sim_settings)

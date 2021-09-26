@@ -23,7 +23,7 @@ def get_delta(before, after):
     return after - before
 
 
-class BiosimulatorsProcess(Process):
+class BiosimulatorProcess(Process):
     """ A Vivarium wrapper for any BioSimulator
 
     parameters:

@@ -3,7 +3,7 @@ import numpy as np
 
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import Control
-from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
+from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from biosimulators_utils.sedml.data_model import ModelLanguage
 
 
@@ -28,19 +28,22 @@ BIOSIMULATOR_SPECS = [
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
-        'default_output_value': np.array(0.)
+        'default_output_value': np.array(0.),
+        'total_time': 2.,
     },
     {
         'biosimulator_api': 'biosimulators_cbmpy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
+        'total_time': 2.,
     },
     {
         'biosimulator_api': 'biosimulators_bionetgen',
         'model_source': BNGL_MODEL_PATH,
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
+        'total_time': 2.,
     },
     {
         'biosimulator_api': 'biosimulators_gillespy2',
@@ -59,6 +62,7 @@ BIOSIMULATOR_SPECS = [
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
         'simulation': 'steady_state',
+        'total_time': 2.,
     },
     {
         'biosimulator_api': 'biosimulators_xpp',
@@ -69,14 +73,11 @@ BIOSIMULATOR_SPECS = [
 ]
 
 
-def test_biosimulators_process(
-        biosimulator_api,
-        model_source,
-        model_language=ModelLanguage.SBML.value,
-        simulation='uniform_time_course',
+def run_biosimulator_process(
         initial_state=None,
         input_output_map=None,
         total_time=10.,
+        **config,
 ):
     """Test BiosimulatorProcess with an API and model
 
@@ -84,13 +85,8 @@ def test_biosimulators_process(
     """
     import warnings; warnings.filterwarnings('ignore')
 
-    config = {
-        'biosimulator_api': biosimulator_api,
-        'model_source': model_source,
-        'model_language':  model_language,
-        'simulation': simulation,
-    }
-    process = BiosimulatorsProcess(config)
+    # initialize the biosimulator process
+    process = BiosimulatorProcess(config)
 
     # make a topology
     topology = {
@@ -119,7 +115,7 @@ def test_biosimulators_process(
 
 def test_all_biosimulators(biosimulator_ids=None):
     """
-    Runs test_biosimulators_process with any number of the available Biosimulator APIs
+    Runs run_biosimulator_process with any number of the available Biosimulator APIs
     """
     import warnings; warnings.filterwarnings('ignore')
 
@@ -130,7 +126,7 @@ def test_all_biosimulators(biosimulator_ids=None):
 
         print(f'TESTING {biosimulator_api}')
         try:
-            test_biosimulators_process(**spec)
+            run_biosimulator_process(**spec)
             print('...PASS!')
         except:
             print('...FAIL!')

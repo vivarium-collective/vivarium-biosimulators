@@ -3,7 +3,7 @@ Execute by running: ``python vivarium_biosimulators/processes/test_tellurium.py`
 """
 import re
 from biosimulators_utils.sedml.data_model import ModelLanguage
-from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
+from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium.core.composition import simulate_process
 from vivarium.core.engine import pf
 
@@ -18,7 +18,7 @@ def tellurium_mapping(model_source):
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     }
-    process = BiosimulatorsProcess(config)
+    process = BiosimulatorProcess(config)
     initial_state = {}
     input_output_map = {}
     for input_variable in process.inputs:
@@ -54,7 +54,7 @@ def test_tellurium_process(
     }
     
     # make the process
-    process = BiosimulatorsProcess(config)
+    process = BiosimulatorProcess(config)
 
     # assert that port_assignment works
     process_initial_state = process.initial_state()
