@@ -19,15 +19,13 @@ def tellurium_mapping(model_source):
         'simulation': 'uniform_time_course',
     }
     process = BiosimulatorProcess(config)
-    initial_state = {}
     input_output_map = {}
-    for input_variable in process.inputs:
-        if input_variable.target and input_variable.target.endswith('@initialConcentration'):
-            input_name = input_variable.id
-            output_name = 'dynamics_species_' + re.search('"(.*)"', input_variable.name).group(1)
-            initial_state[output_name] = float(input_variable.new_value)
-            input_output_map[input_name] = (output_name,)
-    return initial_state, input_output_map
+    for variable in process.inputs:
+        if variable.target and variable.target.endswith('@initialConcentration'):
+            input_name = variable.id
+            output_name = input_name.replace('init_conc_species_', 'dynamics_species_')
+            input_output_map[input_name] = output_name
+    return input_output_map
 
 
 
@@ -37,7 +35,7 @@ def test_tellurium_process(
     import warnings; warnings.filterwarnings('ignore')
 
     # update ports based on input_output_map
-    initial_state, input_output_map = tellurium_mapping(model_source)
+    input_output_map = tellurium_mapping(model_source)
     input_variable_names = list(input_output_map.keys())
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
@@ -56,23 +54,46 @@ def test_tellurium_process(
     # make the process
     process = BiosimulatorProcess(config)
 
+    # declare the topology
+    # connect initial concentrations to outputs
+    rename_concs = {
+        input: (output,)
+        for input, output in input_output_map.items()
+    }
+    topology = {
+        'concentrations': {
+            '_path': ('concentrations',),
+            **rename_concs
+        },
+        'outputs': ('concentrations',),
+    }
+
     # assert that port_assignment works
     process_initial_state = process.initial_state()
     assert list(process_initial_state['concentrations'].keys()) == input_variable_names
 
     # test a process update
     update = process.next_update(1, process_initial_state)
-    # TODO(ERAN) -- add an assert
+    assert sum(update['outputs'].values()) > 0
+
+    # rename initial concentrations variables according to input_output_map
+    init_concentrations = process_initial_state['concentrations']
+    process_initial_state['concentrations'] = {
+        input_output_map[input_name]: value
+        for input_name, value in init_concentrations.items()
+    }
+    del process_initial_state['outputs']  # outputs port maps to concentration
 
     # run the simulation
     sim_settings = {
         'total_time': 10.,
+        'topology': topology,
         'initial_state': process_initial_state,
-        'display_info': False}
+        'display_info': False,
+    }
     output = simulate_process(process, sim_settings)
 
     print(pf(output))
-
 
 # run with python vivarium_biosimulators/experiments/test_tellurium.py
 if __name__ == '__main__':

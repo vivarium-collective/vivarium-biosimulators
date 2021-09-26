@@ -52,4 +52,3 @@ def test_tellurium_cobrapy(
 # run with python vivarium_biosimulators/experiments/tellurium_cobra.py
 if __name__ == '__main__':
     test_tellurium_cobrapy()
-    

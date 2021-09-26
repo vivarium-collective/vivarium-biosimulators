@@ -8,6 +8,7 @@ KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 
 import importlib
 import copy
+import numpy as np
 
 from vivarium.core.process import Process
 
@@ -162,13 +163,14 @@ class BiosimulatorProcess(Process):
             self.output_ports.append(default_output_port_id)
 
     def initial_state(self, config=None):
-        """extract initial state according to port_assignments
+        """
+        extract initial state according to port_assignments
         """
         initial_state = {
             'global_time': 0
         }
         input_values = {
-            input_state.id: input_state.new_value
+            input_state.id: float(input_state.new_value)  # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
             for input_state in self.inputs}
 
         for port_id, variables in self.port_assignments.items():
@@ -240,7 +242,7 @@ class BiosimulatorProcess(Process):
             update[port_id] = {}
             variable_ids = self.port_assignments[port_id]
             for variable_id in variable_ids:
-                if isinstance(raw_results[variable_id], list):
+                if isinstance(raw_results[variable_id], (list, np.ndarray)):
                     value = raw_results[variable_id][-1]
                 else:
                     value = raw_results[variable_id]
