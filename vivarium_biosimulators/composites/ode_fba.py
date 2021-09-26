@@ -7,9 +7,6 @@ ODE FBA Composite
 from vivarium.core.composer import Composer
 from vivarium_biosimulators.processes.biosimulators_process import BiosimulatorsProcess
 
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
-BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
-
 
 class ODE_FBA(Composer):
     defaults = {
@@ -17,6 +14,8 @@ class ODE_FBA(Composer):
         'fba_config': {},
         'flux_map': {}  # {'ode_rxn_name': 'fba_bounds_name'}
     }
+    def __init__(self, config=None):
+        super().__init__(config)
 
     def generate_processes(self, config):
         return {
@@ -28,11 +27,11 @@ class ODE_FBA(Composer):
         # TODO the flux output needs to be connected to fba's bounds input using flux_map
         return {
             'ode_process': {
-                'input': ('state',),
-                'output': ('state',),
+                'inputs': ('state',),
+                'outputs': ('state',),
             },
             'fba_process': {
-                'input': ('state',),
-                'output': ('state',),
+                'inputs': ('state',),
+                'outputs': ('state',),
             },
         }

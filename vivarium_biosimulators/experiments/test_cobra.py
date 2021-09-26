@@ -1,5 +1,5 @@
 """
-Execute by running: ``python vivarium_biosimulators/processes/cobra_process.py``
+Execute by running: ``python vivarium_biosimulators/processes/test_cobra.py``
 """
 import numpy as np
 from biosimulators_utils.sedml.data_model import ModelLanguage
@@ -45,5 +45,6 @@ def test_cobra_process(
     print(pf(output))
 
 
+# run with python vivarium_biosimulators/experiments/test_cobra.py
 if __name__ == '__main__':
     test_cobra_process()

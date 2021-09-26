@@ -1,5 +1,5 @@
 """
-Execute by running: ``python vivarium_biosimulators/processes/tellurium_process.py``
+Execute by running: ``python vivarium_biosimulators/processes/test_tellurium.py``
 """
 import re
 from biosimulators_utils.sedml.data_model import ModelLanguage
@@ -74,5 +74,6 @@ def test_tellurium_process(
     print(pf(output))
 
 
+# run with python vivarium_biosimulators/experiments/test_tellurium.py
 if __name__ == '__main__':
     test_tellurium_process()

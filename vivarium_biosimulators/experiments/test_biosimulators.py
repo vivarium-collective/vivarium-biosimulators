@@ -130,12 +130,7 @@ def test_all_biosimulators(biosimulator_ids=None):
 
         print(f'TESTING {biosimulator_api}')
         try:
-            test_biosimulators_process(
-                biosimulator_api=spec['biosimulator_api'],
-                model_language=spec['model_language'],
-                model_source=spec['model_source'],
-                simulation=spec['simulation'],
-            )
+            test_biosimulators_process(**spec)
             print('...PASS!')
         except:
             print('...FAIL!')
