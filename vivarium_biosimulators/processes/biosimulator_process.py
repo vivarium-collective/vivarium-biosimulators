@@ -3,6 +3,9 @@
 BioSimulator Process
 ====================
 
+`BiosimulatorProcess` is a general Vivarium :term:`process class` that can load any
+BioSimulator and model, and run it.
+
 KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 """
 
@@ -27,7 +30,7 @@ def get_delta(before, after):
 class BiosimulatorProcess(Process):
     """ A Vivarium wrapper for any BioSimulator
 
-    parameters:
+    Config:
         - biosimulator_api (str): the name of the imported biosimulator api
         - model_source (str): a path to the model file
         - model_language (str): the model language, select from biosimulators_utils.sedml.data_model.ModelLanguage
@@ -37,7 +40,7 @@ class BiosimulatorProcess(Process):
         - default_input_port_name (str): the default input port name for variables not specified by input_ports
         - default_output_port_name (str): the default output port name for variables not specified by output_ports
         - emit_ports (list): a list of the ports whose values are emitted
-        - time_step (float): the syncronization time step
+        - time_step (float): the synchronization time step
     """
     
     defaults = {
@@ -192,6 +195,7 @@ class BiosimulatorProcess(Process):
         return False
 
     def ports_schema(self):
+        """ make port schema for all ports and variables in self.port_assignments """
         schema = {
             'global_time': {'_default': 0.}
         }
@@ -199,7 +203,8 @@ class BiosimulatorProcess(Process):
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
                 variable: {
-                    '_default': self.parameters['default_output_value'] if port_id in self.output_ports else self.parameters['default_input_value'],
+                    '_default': self.parameters['default_output_value'] if
+                    port_id in self.output_ports else self.parameters['default_input_value'],
                     '_updater': 'accumulate',
                     '_emit': emit_port,
                 } for variable in variables

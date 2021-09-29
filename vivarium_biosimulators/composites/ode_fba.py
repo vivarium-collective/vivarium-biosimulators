@@ -2,6 +2,10 @@
 =================
 ODE FBA Composite
 =================
+
+`ODE_FBA` is a :term:`Composer` that initializes and ODE BioSimulator, an FBA BioSimulator,
+and wires them together so that the ODE model's flux outputs are used to constrain the FBA
+model's flux bound inputs.
 """
 
 from vivarium.core.process import Deriver
@@ -19,17 +23,31 @@ class FluxBoundsConverter(Deriver):
     def next_update(self, timestep, states):
         return {}
 
+
 def make_path(key):
     if isinstance(key, str):
         return key,
     return key
 
-class ODE_FBA(Composer):
-    """Makes ODE/FBA Composite
 
-    Config options:
-        - ode_config (dict):
-        - fba_config (dict):
+class ODE_FBA(Composer):
+    """ Makes an ODE/FBA Composite
+
+    Config:
+        - ode_config (dict): configuration for the ode biosimulator.
+            Must include values for 'biosimulator_api', 'model_source',
+            'simulation', and 'model_language'.
+        - fba_config (dict): configuration for the fba biosimulator.
+            Must include values for 'biosimulator_api', 'model_source',
+            'simulation', and 'model_language'.
+        - ode_input_ports (dict):
+        - ode_output_ports (dict):
+        - fba_input_ports (dict):
+        - fba_output_ports (dict):
+        - ode_topology (dict):
+        - fba_topology (dict):
+        - default_store (str): The name of a default store, to use if a
+            port mapping is not declared by ode_topology or fba_topology.
     """
     defaults = {
         'ode_config': None,
@@ -74,10 +92,11 @@ class ODE_FBA(Composer):
         }
 
         # return initialized processes
-        return {
+        processes = {
             'ode': BiosimulatorProcess(ode_full_config),
             'fba': BiosimulatorProcess(fba_full_config),
         }
+        return processes
 
     def generate_topology(self, config):
 

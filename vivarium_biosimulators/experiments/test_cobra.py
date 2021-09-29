@@ -1,4 +1,7 @@
 """
+Test BiosimulatorProcess's COBRApy API
+======================================
+
 Execute by running: ``python vivarium_biosimulators/processes/test_cobra.py``
 """
 import numpy as np

@@ -113,7 +113,7 @@ def run_biosimulator_process(
     return output
 
 
-def test_all_biosimulators(biosimulator_ids=None):
+def test_biosimulators(biosimulator_ids=None):
     """
     Runs run_biosimulator_process with any number of the available Biosimulator APIs
     """
@@ -134,7 +134,7 @@ def test_all_biosimulators(biosimulator_ids=None):
 
 
 test_library = {
-    '0': test_all_biosimulators,
+    '0': test_biosimulators,
 }
 workflow_library = {
     'all': {
@@ -161,4 +161,3 @@ if __name__ == '__main__':
         experiments=test_library,
         workflows=workflow_library,
     )
-

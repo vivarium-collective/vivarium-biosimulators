@@ -1,4 +1,7 @@
 """
+Test BiosimulatorProcess's Tellurium API
+========================================
+
 Execute by running: ``python vivarium_biosimulators/processes/test_tellurium.py``
 """
 
