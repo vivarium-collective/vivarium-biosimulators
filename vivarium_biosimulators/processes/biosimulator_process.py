@@ -11,7 +11,6 @@ KISAO: https://bioportal.bioontology.org/ontologies/KISAO
 
 import importlib
 import copy
-import numpy as np
 
 from vivarium.core.process import Process
 
@@ -21,6 +20,9 @@ from biosimulators_utils.sedml.data_model import (
     UniformTimeCourseSimulation, SteadyStateSimulation
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
+
+
+TIME_COURSE_SIMULATIONS = ['uniform_time_course', 'analysis']
 
 
 def get_delta(before, after):
@@ -82,7 +84,7 @@ class BiosimulatorProcess(Process):
 
         # get the simulation
         simulation = None
-        if self.parameters['simulation'] == 'uniform_time_course':
+        if self.parameters['simulation'] in TIME_COURSE_SIMULATIONS:
             simulation = UniformTimeCourseSimulation(
                 id='simulation',
                 initial_time=0.,
@@ -184,6 +186,12 @@ class BiosimulatorProcess(Process):
             input_state.id: float(input_state.new_value)  # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
             for input_state in self.inputs}
 
+        # run task to view initial values
+        results = self.run_task(
+            input_values, 0, self.parameters['time_step'])
+        output_values = self.process_results(
+            results, time_course_index=0)
+
         for port_id, variables in self.port_assignments.items():
             if port_id in self.input_ports:
                 initial_state[port_id] = {
@@ -192,15 +200,15 @@ class BiosimulatorProcess(Process):
                 }
             elif port_id in self.output_ports:
                 initial_state[port_id] = {
-                    variable: self.parameters['default_output_value']
+                    variable: output_values[variable]
                     for variable in variables
                 }
         return initial_state
 
     def is_deriver(self):
-        if self.parameters['simulation'] == 'one_step':
-            return True
-        return False
+        if self.parameters['simulation'] in TIME_COURSE_SIMULATIONS:
+            return False
+        return True
 
     def ports_schema(self):
         """ make port schema for all ports and variables in self.port_assignments """
@@ -219,26 +227,20 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
-    def next_update(self, interval, states):
-
-        # collect the inputs
-        input_variables = {}
-        for port_id in self.input_ports:
-            input_variables.update(states[port_id])
+    def run_task(self, inputs, initial_time, interval):
 
         # update model based on input
         self.task.changes = []
-        for variable_id, variable_value in input_variables.items():
+        for variable_id, variable_value in inputs.items():
             self.task.changes.append(ModelAttributeChange(
                 target=self.input_id_target_map[variable_id],
                 new_value=variable_value,
             ))
 
         # set the simulation time
-        global_time = states['global_time']
-        self.task.simulation.initial_time = global_time
-        self.task.simulation.output_start_time = global_time
-        self.task.simulation.output_end_time = global_time + interval
+        self.task.simulation.initial_time = initial_time
+        self.task.simulation.output_start_time = initial_time
+        self.task.simulation.output_end_time = initial_time + interval
 
         # execute step
         raw_results, log = self.exec_sed_task(
@@ -247,6 +249,33 @@ class BiosimulatorProcess(Process):
             preprocessed_task=self.preprocessed_task,
             config=self.config,
         )
+        return raw_results
+
+    def process_result(self, result, time_course_index=-1):
+        if self.parameters['simulation'] in TIME_COURSE_SIMULATIONS:
+            value = result[time_course_index]
+        else:
+            value = result
+        return value
+
+    def process_results(self, results, time_course_index=-1):
+        values = {}
+        for result_id, result in results.items():
+            values[result_id] = self.process_result(result, time_course_index)
+        return values
+
+    def next_update(self, interval, states):
+
+        # collect the inputs
+        input_values = {}
+        for port_id in self.input_ports:
+            input_values.update(states[port_id])
+
+        # set the simulation time
+        global_time = states['global_time']
+
+        # run task
+        raw_results = self.run_task(input_values, global_time, interval)
 
         # transform results
         update = {}
@@ -256,10 +285,7 @@ class BiosimulatorProcess(Process):
                 update[port_id] = {}
                 for variable_id in variable_ids:
                     raw_result = raw_results[variable_id]
-                    if self.parameters['simulation'] in ['uniform_time_course', 'analysis']:
-                        value = raw_result[-1]
-                    else:
-                        value = raw_result
+                    value = self.process_result(raw_result)
 
                     # TODO -- different get_delta for different data types?
                     update[port_id][variable_id] = get_delta(

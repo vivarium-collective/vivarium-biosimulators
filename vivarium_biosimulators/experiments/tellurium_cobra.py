@@ -78,7 +78,6 @@ def test_tellurium_cobrapy(
     output = simulate_composite(ode_fba_composite, sim_settings)
 
     print(pf(output))
-    # import ipdb; ipdb.set_trace()
 
 
 # run with python vivarium_biosimulators/experiments/tellurium_cobra.py
