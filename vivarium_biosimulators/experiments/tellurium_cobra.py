@@ -39,13 +39,9 @@ def test_tellurium_cobrapy(
             'model_language': ModelLanguage.SBML.value,
             'default_output_value': np.array(0.)
         },
-        'ode_input_ports': {
-            'concentrations': tellurium_input_variable_names,
-        },
-        'ode_output_ports': {
-            'time': 'time'
-        },
-        'flux_map': {}
+        'flux_to_bound_map': {
+
+        }
     }
     ode_fba_composite = ODE_FBA(config).generate()
 
