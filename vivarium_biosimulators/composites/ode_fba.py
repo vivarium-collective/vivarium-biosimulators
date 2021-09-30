@@ -21,32 +21,32 @@ class FluxBoundsConverter(Deriver):
     def __init__(self, parameters=None):
         super().__init__(parameters)
         self.flux_to_bound_map = self.parameters['flux_to_bound_map']
+
     def ports_schema(self):
+        if self.flux_to_bound_map:
+            return {
+                'fluxes': {
+                    rxn_id: {'_default': 0.}
+                    for rxn_id in self.flux_to_bound_map.keys()
+                },
+                'bounds': {
+                    rxn_id: {'_default': 0., '_updater': 'set'}
+                    for rxn_id in self.flux_to_bound_map.values()
+                },
+            }
         return {
-            'fluxes': {
-                rxn_id: {
-                    '_default': 0.,
-                }
-                for rxn_id in self.flux_to_bound_map.keys()
-            },
-            'bounds': {
-                rxn_id: {
-                    '_default': 0.,
-                    '_updater': 'set',
-                }
-                for rxn_id in self.flux_to_bound_map.values()
-            },
-        }
-    def next_update(self, timestep, states):
-        # transform fluxes to flux_bounds
-        flux_bounds = {
-            self.flux_to_bound_map[flux_id]: flux_value
-            for flux_id, flux_value in states['fluxes'].items()
-        }
-        return {
-            'bounds': flux_bounds
+            'fluxes': {},
+            'bounds': {},
         }
 
+    def next_update(self, timestep, states):
+        if self.flux_to_bound_map:
+            flux_bounds = {
+                self.flux_to_bound_map[flux_id]: flux_value
+                for flux_id, flux_value in states['fluxes'].items()
+            }
+            return {'bounds': flux_bounds}
+        return {}
 
 def make_path(key):
     if isinstance(key, str):

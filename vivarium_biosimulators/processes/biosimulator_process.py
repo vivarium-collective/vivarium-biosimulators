@@ -133,14 +133,13 @@ class BiosimulatorProcess(Process):
         )
 
         # port assignments
+        self.port_assignments = {}
+        self.input_ports = []
+        self.output_ports = []
         all_inputs = [input_state.id for input_state in self.inputs]
         all_outputs = [output_state.id for output_state in self.outputs]
         remaining_inputs = copy.deepcopy(all_inputs)
         remaining_outputs = copy.deepcopy(all_outputs)
-
-        self.port_assignments = {}
-        self.input_ports = []
-        self.output_ports = []
 
         if self.parameters['input_ports']:
             for port_id, variables in self.parameters['input_ports'].items():
@@ -252,16 +251,17 @@ class BiosimulatorProcess(Process):
         # transform results
         update = {}
         for port_id in self.output_ports:
-            update[port_id] = {}
             variable_ids = self.port_assignments[port_id]
-            for variable_id in variable_ids:
-                raw_result = raw_results[variable_id]
-                if self.parameters['simulation'] in ['uniform_time_course', 'analysis']:
-                    value = raw_result[-1]
-                else:
-                    value = raw_result
+            if variable_ids:
+                update[port_id] = {}
+                for variable_id in variable_ids:
+                    raw_result = raw_results[variable_id]
+                    if self.parameters['simulation'] in ['uniform_time_course', 'analysis']:
+                        value = raw_result[-1]
+                    else:
+                        value = raw_result
 
-                # TODO -- different get_delta for different data types?
-                update[port_id][variable_id] = get_delta(states[port_id][variable_id], value)
-
+                    # TODO -- different get_delta for different data types?
+                    update[port_id][variable_id] = get_delta(
+                        states[port_id][variable_id], value)
         return update

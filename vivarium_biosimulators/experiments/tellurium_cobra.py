@@ -40,21 +40,35 @@ def test_tellurium_cobrapy(
             'default_output_value': np.array(0.)
         },
         'flux_to_bound_map': {
-
+            'dynamics_species_Glucose_internal': 'value_parameter_R_EX_glc__D_e_lower_bound',
+            # 'dynamics_species_Lactose_consumed': 'EX_lac__D_e', # TODO -- need to register EX_lac__D_e as an FBA parameter...
         }
     }
     ode_fba_composite = ODE_FBA(config).generate()
 
-    # initial state
-    ode_inputs = ode_fba_composite['processes']['ode'].inputs
-    ode_outputs = ode_fba_composite['processes']['ode'].outputs
-    fba_inputs = ode_fba_composite['processes']['fba'].inputs
-    fba_outputs = ode_fba_composite['processes']['fba'].outputs
+    # print the ode outputs and fba inputs to see what is available
+    ode_outputs = [var.id for var in ode_fba_composite['processes']['ode'].outputs]
+    fba_inputs = [var.id for var in ode_fba_composite['processes']['fba'].inputs]
+    print('ODE OUTPUTS')
+    print(pf(ode_outputs))
+    print('FBA INPUTS')
+    print(pf(fba_inputs))
 
+    # get initial state from composite
     initial_state = ode_fba_composite.initial_state()
 
-    # TODO -- make the initial state
+    # print initial state
+    print('INITIAL STATES')
+    for var_id, val in initial_state['state'].items():
+        if 'dynamics_species_' in var_id:
+            print(f"{var_id}: {val}")
+    print('INITIAL FLUXES')
+    for var_id, val in initial_state['fluxes'].items():
+        if 'dynamics_species_' in var_id:
+            print(f"{var_id}: {val}")
 
+    # TODO -- initial states are not extracted from ODE model... all zeros
+    # import ipdb; ipdb.set_trace()
 
     # run the simulation
     sim_settings = {
