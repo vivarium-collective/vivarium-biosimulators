@@ -7,14 +7,13 @@ COPY . /app
 
 # install dependencies
 ## biosimulators test suite for examples
-RUN pipenv run git clone https://github.com/biosimulators/Biosimulators_test_suite.git
-RUN pipenv run pip install Biosimulators_test_suite
+RUN git clone https://github.com/biosimulators/Biosimulators_test_suite.git
+RUN pip install Biosimulators_test_suite
 ## vivarium-biosimulators requirements
-RUN pipenv run pip install -r requirements.txt
-# RUN pipenv run pip install -r update_requirements.txt --upgrade
+RUN pip install -r requirements.txt
 
 # start mock up server for output
 # RUN pipenv run xvfb-startup.sh
 
 # command
-CMD ["pipenv", "run", "python", "vivarium_biosimulators/experiments/test_biosimulators.py", "-e", "0"]
+CMD ["python", "vivarium_biosimulators/experiments/test_biosimulators.py", "-e", "0"]

@@ -1,8 +1,10 @@
 import traceback
+import numpy as np
 
-from vivarium.core.control import run_library_cli, Control
+from vivarium.core.composition import simulate_process
+from vivarium.core.control import Control
+from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from biosimulators_utils.sedml.data_model import ModelLanguage
-from vivarium_biosimulators.processes.biosimulators_process import test_biosimulators_process
 
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
@@ -11,54 +13,59 @@ XPP_MODEL_PATH = 'Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-200
 RBA_MODEL_PATH = 'Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
 BNGL_MODEL_PATH = 'Biosimulators_test_suite/examples/bngl/Dolan-PLoS-Comput-Biol-2015-NHEJ/Dolan2015.bngl'
 
-# TODO (ERAN): automatically access the ids from BioSimulators
+
 # Python modules can be found at https://api.biosimulators.org/simulators/
 # get example models from https://github.com/biosimulators/Biosimulators_test_suite/tree/dev/examples
 BIOSIMULATOR_SPECS = [
     {
-        'api': 'biosimulators_tellurium',
+        'biosimulator_api': 'biosimulators_tellurium',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
+        'total_time': 10.,
     },
     {
-        'api': 'biosimulators_cobrapy',
+        'biosimulator_api': 'biosimulators_cobrapy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
+        'default_output_value': np.array(0.),
+        'kisao_id': 'KISAO_0000437',
     },
     {
-        'api': 'biosimulators_cbmpy',
+        'biosimulator_api': 'biosimulators_cbmpy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
+        'kisao_id': 'KISAO_0000437',
     },
     {
-        'api': 'biosimulators_bionetgen',
+        'biosimulator_api': 'biosimulators_bionetgen',
         'model_source': BNGL_MODEL_PATH,
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_gillespy2',
+        'biosimulator_api': 'biosimulators_gillespy2',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_libsbmlsim',
+        'biosimulator_api': 'biosimulators_libsbmlsim',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     },
     {
-        'api': 'biosimulators_rbapy',
+        'biosimulator_api': 'biosimulators_rbapy',
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
         'simulation': 'steady_state',
+        'kisao_id': 'KISAO_0000669',
     },
     {
-        'api': 'biosimulators_xpp',
+        'biosimulator_api': 'biosimulators_xpp',
         'model_source': XPP_MODEL_PATH,
         'model_language': ModelLanguage.XPP.value,
         'simulation': 'uniform_time_course',
@@ -66,22 +73,60 @@ BIOSIMULATOR_SPECS = [
 ]
 
 
-def test_all_biosimulators(biosimulator_ids=None):
+def run_biosimulator_process(
+        initial_state=None,
+        input_output_map=None,
+        total_time=1.,
+        **config,
+):
+    """Test BiosimulatorProcess with an API and model
+
+    Load BiosimulatorProcess with a single Biosimulator API and model, and run it
+    """
+    import warnings; warnings.filterwarnings('ignore')
+
+    # initialize the biosimulator process
+    process = BiosimulatorProcess(config)
+
+    # make a topology
+    topology = {
+        'global_time': ('global_time',),
+        'input': ('state',) if not input_output_map else {
+            **{'_path': ('state',)},
+            **input_output_map,
+        },
+        'output': ('state',)
+    }
+
+    # get initial_state
+    initial_state = initial_state or {}
+    initial_model_state = {'state': initial_state} or process.initial_state()
+
+    # run the simulation
+    sim_settings = {
+        'topology': topology,
+        'total_time': total_time,
+        'initial_state': initial_model_state,
+        'display_info': False}
+    output = simulate_process(process, sim_settings)
+
+    return output
+
+
+def test_biosimulators(biosimulator_ids=None):
+    """
+    Runs run_biosimulator_process with any number of the available Biosimulator APIs
+    """
     import warnings; warnings.filterwarnings('ignore')
 
     for spec in BIOSIMULATOR_SPECS:
-        biosimulator_api = spec['api']
+        biosimulator_api = spec['biosimulator_api']
         if biosimulator_ids and biosimulator_api not in biosimulator_ids:
             continue
 
         print(f'TESTING {biosimulator_api}')
         try:
-            test_biosimulators_process(
-                biosimulator_api=spec['api'],
-                model_language=spec['model_language'],
-                model_source=spec['model_source'],
-                simulation=spec['simulation'],
-            )
+            run_biosimulator_process(**spec)
             print('...PASS!')
         except:
             print('...FAIL!')
@@ -89,7 +134,7 @@ def test_all_biosimulators(biosimulator_ids=None):
 
 
 test_library = {
-    '0': test_all_biosimulators,
+    '0': test_biosimulators,
 }
 workflow_library = {
     'all': {
@@ -116,4 +161,3 @@ if __name__ == '__main__':
         experiments=test_library,
         workflows=workflow_library,
     )
-
