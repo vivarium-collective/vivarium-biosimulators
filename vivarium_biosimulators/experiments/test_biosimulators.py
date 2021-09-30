@@ -22,6 +22,7 @@ BIOSIMULATOR_SPECS = [
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
+        'total_time': 10.,
     },
     {
         'biosimulator_api': 'biosimulators_cobrapy',
@@ -29,21 +30,20 @@ BIOSIMULATOR_SPECS = [
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
         'default_output_value': np.array(0.),
-        'total_time': 2.,
+        'kisao_id': 'KISAO_0000437',
     },
     {
         'biosimulator_api': 'biosimulators_cbmpy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
-        'total_time': 2.,
+        'kisao_id': 'KISAO_0000437',
     },
     {
         'biosimulator_api': 'biosimulators_bionetgen',
         'model_source': BNGL_MODEL_PATH,
         'model_language': ModelLanguage.BNGL.value,
         'simulation': 'uniform_time_course',
-        'total_time': 2.,
     },
     {
         'biosimulator_api': 'biosimulators_gillespy2',
@@ -62,7 +62,7 @@ BIOSIMULATOR_SPECS = [
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
         'simulation': 'steady_state',
-        'total_time': 2.,
+        'kisao_id': 'KISAO_0000669',
     },
     {
         'biosimulator_api': 'biosimulators_xpp',
@@ -76,7 +76,7 @@ BIOSIMULATOR_SPECS = [
 def run_biosimulator_process(
         initial_state=None,
         input_output_map=None,
-        total_time=10.,
+        total_time=1.,
         **config,
 ):
     """Test BiosimulatorProcess with an API and model

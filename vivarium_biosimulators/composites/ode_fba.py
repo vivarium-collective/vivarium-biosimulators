@@ -15,13 +15,33 @@ from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorPr
 
 class FluxBoundsConverter(Deriver):
     """Converts fluxes from ode simulator to flux bounds for fba simulator"""
-    defaults = {}
+    defaults = {
+        'reactions': []
+    }
     def __init__(self, parameters=None):
         super().__init__(parameters)
     def ports_schema(self):
-        return {}
+        return {
+            'fluxes': {
+                rxn_id: {
+                    '_default': 0.,
+                }
+                for rxn_id in self.parameters['reactions']
+            },
+            'flux_bounds': {
+                rxn_id: {
+                    '_default': 0.,
+                    '_updater': 'set',
+                }
+                for rxn_id in self.parameters['reactions']
+            },
+        }
     def next_update(self, timestep, states):
-        return {}
+        fluxes = states['fluxes']
+        # TODO -- transform fluxes to flux_bounds
+        return {
+            'flux_bounds': fluxes
+        }
 
 
 def make_path(key):
@@ -59,6 +79,7 @@ class ODE_FBA(Composer):
         'ode_topology': None,
         'fba_topology': None,
         'default_store': 'state',
+        'coupled_reactions': [],
     }
     def __init__(self, config=None):
         super().__init__(config)
@@ -74,26 +95,36 @@ class ODE_FBA(Composer):
         self.fba_topology = self.config['fba_topology'] or {}
         self.default_store = self.config['default_store']
 
+        # the reactions that connect ODE fluxes to FBA flux bounds
+        self.coupled_reactions = self.config['coupled_reactions']
+
     def generate_processes(self, config):
 
-        # make the process configs
+        # make the ode config
         ode_config = config['ode_config'] or {}
-        fba_config = config['fba_config'] or {}
-
         ode_full_config = {
             'input_ports': self.ode_input_ports,
             'output_ports': self.ode_output_ports,
             **ode_config,
         }
+
+        # make the fba config
+        fba_config = config['fba_config'] or {}
         fba_full_config = {
             'input_ports': self.fba_input_ports,
             'output_ports': self.fba_output_ports,
             **fba_config,
         }
 
+        # make the flux bounds config
+        flux_bounds_config = {
+            'reactions': self.coupled_reactions,
+        }
+
         # return initialized processes
         processes = {
             'ode': BiosimulatorProcess(ode_full_config),
+            'flux_bounds': FluxBoundsConverter(flux_bounds_config),
             'fba': BiosimulatorProcess(fba_full_config),
         }
         return processes
@@ -129,9 +160,16 @@ class ODE_FBA(Composer):
             fba_output_topology['outputs'] = make_path(
                 self.fba_topology.get('outputs', self.default_store))
 
+        ## flux_bounds topology
+        flux_bounds_topology = {
+            'fluxes': ('fluxes',),  # TODO ode fluxes need to connect to this
+            'flux_bounds': ('flux_bounds',),  # fba flux bounds need to connect to this
+        }
+
         # return the final topology
         topology = {
             'ode': {**ode_input_topology, **ode_output_topology},
             'fba': {**fba_input_topology, **fba_output_topology},
+            'flux_bounds': flux_bounds_topology,
         }
         return topology

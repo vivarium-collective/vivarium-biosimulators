@@ -24,6 +24,8 @@ from biosimulators_utils.sedml.model_utils import get_parameters_variables_outpu
 
 
 def get_delta(before, after):
+    # TODO -- make this work for BioNetGen, MCell.
+    # TODO -- different method for different data types
     return after - before
 
 
@@ -41,6 +43,9 @@ class BiosimulatorProcess(Process):
         - default_output_port_name (str): the default output port name for variables not specified by output_ports
         - emit_ports (list): a list of the ports whose values are emitted
         - time_step (float): the synchronization time step
+
+    # TODO -- configurable default types for individual variables
+    # TODO -- pass in Algorithm object, and parameters
     """
     
     defaults = {
@@ -52,10 +57,12 @@ class BiosimulatorProcess(Process):
         'output_ports': None,
         'default_input_port_name': 'inputs',
         'default_output_port_name': 'outputs',
-        'default_input_value': 0.,
-        'default_output_value': 0.,
+        'default_input_value': 0.,  # TODO -- scalar (int, float, bool), depends on model language
+        'default_output_value': 0.,  # TODO -- if steady_state then np scalar
         'emit_ports': ['outputs'],
+        'kisao_id': None,
         'time_step': 1.,
+        'port_schema': {},  # TODO -- pass information about data type, updater. like _schema
     }
 
     def __init__(self, parameters=None):
@@ -82,12 +89,14 @@ class BiosimulatorProcess(Process):
                 output_start_time=0.,
                 number_of_points=1,
                 output_end_time=self.parameters['time_step'],
-                algorithm=Algorithm(kisao_id='KISAO_0000019'),
+                algorithm=Algorithm(
+                    kisao_id=self.parameters['kisao_id'] or 'KISAO_0000019'),
             )
         elif self.parameters['simulation'] == 'steady_state':
             simulation = SteadyStateSimulation(
                 id='simulation',
-                algorithm=Algorithm(kisao_id='KISAO_0000437'),
+                algorithm=Algorithm(
+                    kisao_id=self.parameters['kisao_id'] or 'KISAO_0000437'),
             )
 
         # make the task
@@ -241,17 +250,18 @@ class BiosimulatorProcess(Process):
         )
 
         # transform results
-        # TODO(Eran) -- support custom transform methods?
         update = {}
         for port_id in self.output_ports:
             update[port_id] = {}
             variable_ids = self.port_assignments[port_id]
             for variable_id in variable_ids:
                 raw_result = raw_results[variable_id]
-                if isinstance(raw_result, list) or (
-                        isinstance(raw_result, np.ndarray) and raw_result.size > 1):
+                if self.parameters['simulation'] in ['uniform_time_course', 'analysis']:
                     value = raw_result[-1]
                 else:
                     value = raw_result
+
+                # TODO -- different get_delta for different data types?
                 update[port_id][variable_id] = get_delta(states[port_id][variable_id], value)
+
         return update
