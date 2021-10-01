@@ -18,11 +18,8 @@ def test_tellurium_cobrapy(
     import warnings;
     warnings.filterwarnings('ignore')
 
-    # update ports based on input_output_map
+    # get mapping between inputs (initial variables ids) and output variables in tellurium
     tellurium_input_output_map = tellurium_mapping(tellurium_model)
-    tellurium_input_variable_names = list(tellurium_input_output_map.keys())
-
-    # TODO -- declare mapping between ode and fba models
 
     # ode_fba configuration
     config = {
@@ -39,36 +36,42 @@ def test_tellurium_cobrapy(
             'model_language': ModelLanguage.SBML.value,
             'default_output_value': np.array(0.)
         },
+        'ode_input_to_output_map': tellurium_input_output_map,
         'flux_to_bound_map': {
             'dynamics_species_Glucose_internal': 'value_parameter_R_EX_glc__D_e_lower_bound',
-            # 'dynamics_species_Lactose_consumed': 'EX_lac__D_e', # TODO -- need to register EX_lac__D_e as an FBA parameter...
+            # 'dynamics_species_Glucose_internal': 'value_parameter_R_EX_glc__D_e_upper_bound',
+            # 'dynamics_species_Lactose_consumed': 'value_parameter_R_EX_lac__D_e_lower_bound',
+            # 'dynamics_species_Lactose_consumed': 'value_parameter_R_EX_lac__D_e_upper_bound',
+            # TODO upper/lower bounds? these need to connect to flux_to_bounds converter
         }
     }
-    ode_fba_composite = ODE_FBA(config).generate()
+    ode_fba_composer = ODE_FBA(config)
 
-    # print the ode outputs and fba inputs to see what is available
-    ode_outputs = [var.id for var in ode_fba_composite['processes']['ode'].outputs]
-    fba_inputs = [var.id for var in ode_fba_composite['processes']['fba'].inputs]
-    print('ODE OUTPUTS')
-    print(pf(ode_outputs))
-    print('FBA INPUTS')
-    print(pf(fba_inputs))
 
-    # get initial state from composite
-    initial_state = ode_fba_composite.initial_state()
+    # get initial state from composer
+    initial_state = ode_fba_composer.initial_state()
 
-    # print initial state
-    print('INITIAL STATES')
+    print('INITIAL STATES:\n==============')
     for var_id, val in initial_state['state'].items():
         if 'dynamics_species_' in var_id:
             print(f"{var_id}: {val}")
-    print('INITIAL FLUXES')
+    print('INITIAL FLUXES:\n==============')
     for var_id, val in initial_state['fluxes'].items():
         if 'dynamics_species_' in var_id:
             print(f"{var_id}: {val}")
 
-    # TODO -- initial states are not extracted from ODE model... all zeros
-    # import ipdb; ipdb.set_trace()
+    # generate the composite
+    ode_fba_composite = ode_fba_composer.generate()
+
+    print('ODE_FBA TOPOLOGY:\n================')
+    print(pf(ode_fba_composite['topology']))
+    # print the ode outputs and fba inputs to see what is available
+    ode_outputs = [var.id for var in ode_fba_composite['processes']['ode'].outputs]
+    fba_inputs = [var.id for var in ode_fba_composite['processes']['fba'].inputs]
+    print('ODE OUTPUTS:\n===========')
+    print(pf(ode_outputs))
+    print('FBA INPUTS:\n==========')
+    print(pf(fba_inputs))
 
     # run the simulation
     sim_settings = {

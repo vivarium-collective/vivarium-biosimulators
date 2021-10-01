@@ -16,7 +16,8 @@ from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorPr
 class FluxBoundsConverter(Deriver):
     """Converts fluxes from ode simulator to flux bounds for fba simulator"""
     defaults = {
-        'flux_to_bound_map': []
+        'flux_to_bound_map': [],
+        'ode_sync_step': None,  # TODO -- use the ODE simulator's timestep
     }
     def __init__(self, parameters=None):
         super().__init__(parameters)
@@ -40,6 +41,9 @@ class FluxBoundsConverter(Deriver):
         }
 
     def next_update(self, timestep, states):
+
+        # TODO -- use ode_sync_step to get flux
+
         if self.flux_to_bound_map:
             flux_bounds = {
                 self.flux_to_bound_map[flux_id]: flux_value
@@ -48,10 +52,6 @@ class FluxBoundsConverter(Deriver):
             return {'bounds': flux_bounds}
         return {}
 
-def make_path(key):
-    if isinstance(key, str):
-        return key,
-    return key
 
 
 class ODE_FBA(Composer):
@@ -65,6 +65,9 @@ class ODE_FBA(Composer):
             Must include values for 'biosimulator_api', 'model_source',
             'simulation', and 'model_language'.
         - flux_to_bound_map (dict):
+        - ode_input_to_output_map (dict): A map of input variable names to output variable names. For example,
+            the variables' initial states might be inputs that are named differently from the outputs of the
+            same variables (i.e. inputs with name 'init_conc_species_*' might need to map to 'dynamics_species_*').
         - default_store (str): The name of a default store, to use if a
             port mapping is not declared by ode_topology or fba_topology.
     """
@@ -72,6 +75,7 @@ class ODE_FBA(Composer):
         'ode_config': None,
         'fba_config': None,
         'flux_to_bound_map': None,
+        'ode_input_to_output_map': None,
         'default_store': 'state',
     }
     def __init__(self, config=None):
@@ -79,7 +83,19 @@ class ODE_FBA(Composer):
         self.flux_to_bound_map = self.config['flux_to_bound_map']
         self.flux_ids = [rxn_id for rxn_id in self.flux_to_bound_map.keys()]
         self.bounds_ids = [rxn_id for rxn_id in self.flux_to_bound_map.values()]
+        self.ode_input_to_output_map = self.config['ode_input_to_output_map']
         self.default_store = self.config['default_store']
+
+    def initial_state(self, config=None):
+        initial_state = super().initial_state(config)
+        # if ode_input_to_output_map, there might be _multi_update values to sort out
+        # TODO -- fix this in vivarium-core's _get_composite_state
+        if self.ode_input_to_output_map:
+            for store, variable in initial_state[self.default_store].items():
+                if isinstance(variable, dict) and '_multi_update' in variable:
+                    # use the first value. all values in this list should be the same
+                    initial_state[self.default_store][store] = variable['_multi_update'][0]
+        return initial_state
 
     def generate_processes(self, config):
 
@@ -110,10 +126,28 @@ class ODE_FBA(Composer):
 
     def generate_topology(self, config):
 
+        # make a topology for ode inputs port. These might need to connect to
+        # variables in the output port. And if they are in the flux_to_bound_map,
+        # the inputs might  need to connect to 'fluxes'. For example,
+        # {input: ('..', 'fluxes', output,)} instead of {input: (output,)}
+        if self.ode_input_to_output_map:
+            ode_input_to_output_topology = {}
+            for input, output in self.ode_input_to_output_map.items():
+                if output in self.flux_to_bound_map.keys():
+                    ode_input_to_output_topology[input] = ('..', 'fluxes', output)
+                else:
+                    ode_input_to_output_topology[input] = (output,)
+            ode_input_topology = {
+                '_path': (self.default_store,),
+                **ode_input_to_output_topology}
+        else:
+            ode_input_topology = (self.default_store,)
+
+        # put together the composite topology
         topology = {
             'ode': {
                 'fluxes': ('fluxes',),
-                'inputs': (self.default_store,),
+                'inputs': ode_input_topology,
                 'outputs': (self.default_store,),
             },
             'fba': {

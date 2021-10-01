@@ -187,6 +187,7 @@ class BiosimulatorProcess(Process):
             for input_state in self.inputs}
 
         # run task to view initial values
+        # TODO (ERAN) -- can we get the initial output values without running a task?
         results = self.run_task(
             input_values, 0, self.parameters['time_step'])
         output_values = self.process_results(
