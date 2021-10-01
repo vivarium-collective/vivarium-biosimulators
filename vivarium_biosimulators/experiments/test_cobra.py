@@ -36,7 +36,8 @@ def test_cobra_process(
 
     # test a process update
     update = process.next_update(1, process_initial_state)
-    assert sum(update['outputs'].values()) > 0
+    # assert that fluxes did not change (delta is 0)
+    assert sum(update['outputs'].values()) == 0
 
     # run the simulation
     sim_settings = {

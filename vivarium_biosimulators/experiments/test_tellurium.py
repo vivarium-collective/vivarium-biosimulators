@@ -60,7 +60,9 @@ def test_tellurium_process(
 
     # test a process update
     update = process.next_update(1, process_initial_state)
-    assert sum(update['outputs'].values()) > 0
+    # assert values remain positive after update added
+    assert sum([process_initial_state['outputs'][name]+value
+                for name, value in update['outputs'].items()]) > 0
 
     # rename initial concentrations variables according to input_output_map
     init_concentrations = process_initial_state['concentrations']
