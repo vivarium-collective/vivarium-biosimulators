@@ -30,7 +30,6 @@ def test_cobra_process(
         'model_source': model_source,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
-        # 'default_output_value': np.array(0.),
         'algorithm': {
             'kisao_id': 'KISAO_0000437',
         }
@@ -79,7 +78,7 @@ def test_cobra_process(
 def main():
     output = test_cobra_process()
     settings = {'max_rows': 25}
-    plot_simulation_output(output, settings, out_dir='out', filename='cobra')
+    plot_simulation_output(output, settings, out_dir='out', filename='cobrapy')
 
 
 # run with python vivarium_biosimulators/experiments/test_cobra.py
