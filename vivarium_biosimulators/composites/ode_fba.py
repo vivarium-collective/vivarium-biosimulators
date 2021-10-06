@@ -11,6 +11,7 @@ model's flux bound inputs.
 from vivarium.core.process import Deriver
 from vivarium.core.composer import Composer
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.library.mappings import remove_multi_update
 
 
 class FluxBoundsConverter(Deriver):
@@ -88,14 +89,7 @@ class ODE_FBA(Composer):
 
     def initial_state(self, config=None):
         initial_state = super().initial_state(config)
-        # if ode_input_to_output_map, there might be _multi_update values to sort out
-        # TODO -- fix this in vivarium-core's _get_composite_state
-        if self.ode_input_to_output_map:
-            for store, variable in initial_state[self.default_store].items():
-                if isinstance(variable, dict) and '_multi_update' in variable:
-                    # use the first value. all values in this list should be the same
-                    initial_state[self.default_store][store] = variable['_multi_update'][0]
-        return initial_state
+        return remove_multi_update(initial_state)
 
     def generate_processes(self, config):
 

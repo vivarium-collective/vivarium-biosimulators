@@ -146,8 +146,9 @@ class BiosimulatorProcess(Process):
         )
         self.port_assignments.update(output_assignments)
 
-        # TODO (ERAN) -- precalculate initial state, and use types for port_schema.
-        #  get rid of default_output_value, default_input_value
+        # precalculate initial state
+        # TODO(ERAN) use types for port_schema, get rid of default_output_value, default_input_value
+        self.saved_initial_state = self.make_initial_state()
 
 
     def get_port_assignment(
@@ -172,13 +173,14 @@ class BiosimulatorProcess(Process):
                 port_names.append(port_id)
 
         if remaining_variables:
-            default_input_port_id = default_port_name
-            port_assignments[default_input_port_id] = all_variables
-            port_names.append(default_input_port_id)
+            port_assignments[default_port_name] = remaining_variables
+            port_names.append(default_port_name)
         return port_names, port_assignments
 
-
     def initial_state(self, config=None):
+        return self.saved_initial_state
+
+    def make_initial_state(self):
         """
         extract initial state according to port_assignments
         """
@@ -218,15 +220,14 @@ class BiosimulatorProcess(Process):
     def ports_schema(self):
         """ make port schema for all ports and variables in self.port_assignments """
         schema = {
-            'global_time': {'_default': 0.}
+            'global': {
+                'time': {'_default': 0.}}
         }
         for port_id, variables in self.port_assignments.items():
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
                 variable: {
-                    # TODO (Eran) -- need more configurable input/output values.
-                    '_default': self.parameters['default_output_value'] if
-                    port_id in self.output_ports else self.parameters['default_input_value'],
+                    '_default': self.saved_initial_state[port_id][variable],
                     '_updater': 'accumulate',
                     '_emit': emit_port,
                 } for variable in variables
@@ -278,7 +279,7 @@ class BiosimulatorProcess(Process):
             input_values.update(states[port_id])
 
         # set the simulation time
-        global_time = states['global_time']
+        global_time = states['global']['time']
 
         # run task
         raw_results = self.run_task(input_values, global_time, interval)
