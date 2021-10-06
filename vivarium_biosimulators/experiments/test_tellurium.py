@@ -12,7 +12,8 @@ from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorPr
 from vivarium.core.composition import simulate_process
 from vivarium.core.engine import pf
 
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+# SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+SBML_MODEL_PATH = 'vivarium_biosimulators/models/LacOperon_deterministic.xml'
 
 
 def test_tellurium_process(
@@ -30,7 +31,6 @@ def test_tellurium_process(
         'simulation': 'uniform_time_course',
         'input_ports': {
             'concentrations': input_variable_names,
-            'size': 'init_size_compartment_compartment',
         },
         'output_ports': {
             'time': 'time'

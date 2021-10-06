@@ -25,7 +25,10 @@ def test_cobra_process(
         'model_source': model_source,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
-        'default_output_value': np.array(0.)
+        'default_output_value': np.array(0.),
+        'algorithm': {
+            'kisao_id': 'KISAO_0000437',
+        }
     }
 
     # make the process

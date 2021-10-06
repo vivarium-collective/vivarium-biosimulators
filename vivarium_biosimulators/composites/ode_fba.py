@@ -102,12 +102,14 @@ class ODE_FBA(Composer):
         # make the ode config
         ode_full_config = {
             'output_ports': {'fluxes': self.flux_ids},
+            'emit_ports': ['outputs', 'fluxes'],
             **config['ode_config'],
         }
 
         # make the fba config
         fba_full_config = {
             'input_ports': {'bounds': self.bounds_ids},
+            'emit_ports': ['outputs', 'bounds'],
             **config['fba_config'],
         }
 
@@ -132,11 +134,11 @@ class ODE_FBA(Composer):
         # {input: ('..', 'fluxes', output,)} instead of {input: (output,)}
         if self.ode_input_to_output_map:
             ode_input_to_output_topology = {}
-            for input, output in self.ode_input_to_output_map.items():
-                if output in self.flux_to_bound_map.keys():
-                    ode_input_to_output_topology[input] = ('..', 'fluxes', output)
+            for input_name, output_name in self.ode_input_to_output_map.items():
+                if output_name in self.flux_to_bound_map.keys():
+                    ode_input_to_output_topology[input_name] = ('..', 'fluxes', output_name)
                 else:
-                    ode_input_to_output_topology[input] = (output,)
+                    ode_input_to_output_topology[input_name] = (output_name,)
             ode_input_topology = {
                 '_path': (self.default_store,),
                 **ode_input_to_output_topology}

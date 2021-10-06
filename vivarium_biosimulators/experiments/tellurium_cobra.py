@@ -8,12 +8,13 @@ from vivarium_biosimulators.library.mappings import tellurium_mapping
 
 SBML_MODEL_PATH = 'vivarium_biosimulators/models/LacOperon_deterministic.xml'
 BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
+# SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000244_url.xml'
 
 
 def test_tellurium_cobrapy(
         tellurium_model=SBML_MODEL_PATH,
         cobra_model=BIGG_MODEL_PATH,
-        total_time=10.,
+        total_time=2.,
 ):
     import warnings;
     warnings.filterwarnings('ignore')
@@ -34,7 +35,10 @@ def test_tellurium_cobrapy(
             'model_source': cobra_model,
             'simulation': 'steady_state',
             'model_language': ModelLanguage.SBML.value,
-            'default_output_value': np.array(0.)
+            'default_output_value': np.array(0.),
+            'algorithm': {
+                'kisao_id': 'KISAO_0000437',
+            }
         },
         'ode_input_to_output_map': tellurium_input_output_map,
         'flux_to_bound_map': {
@@ -46,7 +50,6 @@ def test_tellurium_cobrapy(
         }
     }
     ode_fba_composer = ODE_FBA(config)
-
 
     # get initial state from composer
     initial_state = ode_fba_composer.initial_state()

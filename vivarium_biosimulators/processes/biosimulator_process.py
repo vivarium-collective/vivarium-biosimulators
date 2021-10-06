@@ -47,7 +47,6 @@ class BiosimulatorProcess(Process):
         - time_step (float): the synchronization time step
 
     # TODO -- configurable default types for individual variables
-    # TODO -- pass in Algorithm object, and parameters
     """
     
     defaults = {
@@ -62,9 +61,10 @@ class BiosimulatorProcess(Process):
         'default_input_value': 0.,  # TODO -- scalar (int, float, bool), depends on model language
         'default_output_value': 0.,  # TODO -- if steady_state then np scalar
         'emit_ports': ['outputs'],
-        'kisao_id': None,
+        'algorithm': {
+            'kisao_id': 'KISAO_0000019',  # default is CVODE
+        },
         'time_step': 1.,
-        'port_schema': {},  # TODO -- pass information about data type, updater. like _schema
     }
 
     def __init__(self, parameters=None):
@@ -91,14 +91,12 @@ class BiosimulatorProcess(Process):
                 output_start_time=0.,
                 number_of_points=1,
                 output_end_time=self.parameters['time_step'],
-                algorithm=Algorithm(
-                    kisao_id=self.parameters['kisao_id'] or 'KISAO_0000019'),
+                algorithm=Algorithm(**self.parameters['algorithm']),
             )
         elif self.parameters['simulation'] == 'steady_state':
             simulation = SteadyStateSimulation(
                 id='simulation',
-                algorithm=Algorithm(
-                    kisao_id=self.parameters['kisao_id'] or 'KISAO_0000437'),
+                algorithm=Algorithm(**self.parameters['algorithm']),
             )
 
         # make the task
@@ -125,55 +123,60 @@ class BiosimulatorProcess(Process):
         for variable in self.outputs:
             variable.task = self.task
 
-        self.config = Config(LOG=False)
-
         # pre-process
+        self.sed_task_config = Config(LOG=False)
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
             self.outputs,
-            config=self.config,
+            config=self.sed_task_config,
         )
 
-        # port assignments
+        # port assignments from parameters
         self.port_assignments = {}
-        self.input_ports = []
-        self.output_ports = []
-        all_inputs = [input_state.id for input_state in self.inputs]
-        all_outputs = [output_state.id for output_state in self.outputs]
-        remaining_inputs = copy.deepcopy(all_inputs)
-        remaining_outputs = copy.deepcopy(all_outputs)
+        self.input_ports, input_assignments = self.get_port_assignment(
+            self.parameters['input_ports'],
+            self.inputs,
+            self.parameters['default_input_port_name'],
+        )
+        self.port_assignments.update(input_assignments)
+        self.output_ports, output_assignments = self.get_port_assignment(
+            self.parameters['output_ports'],
+            self.outputs,
+            self.parameters['default_output_port_name'],
+        )
+        self.port_assignments.update(output_assignments)
 
-        if self.parameters['input_ports']:
-            for port_id, variables in self.parameters['input_ports'].items():
+        # TODO (ERAN) -- precalculate initial state, and use types for port_schema.
+        #  get rid of default_output_value, default_input_value
+
+
+    def get_port_assignment(
+            self,
+            ports_dict,
+            variables,
+            default_port_name,
+    ):
+        port_assignments = {}
+        port_names = []
+        all_variables = [input_state.id for input_state in variables]
+        remaining_variables = copy.deepcopy(all_variables)
+        if ports_dict:
+            for port_id, variables in ports_dict.items():
                 if isinstance(variables, str):
                     variables = [variables]
                 for variable_id in variables:
-                    assert variable_id in all_inputs, \
-                        f"port assigments: variable id '{variable_id}' is not in the available inputs:{all_inputs} "
-                    remaining_inputs.remove(variable_id)
-                self.port_assignments[port_id] = variables
-                self.input_ports.append(port_id)
+                    assert variable_id in all_variables, \
+                        f"'{variable_id}' is not in the available in variable ids: {all_variables} "
+                    remaining_variables.remove(variable_id)
+                port_assignments[port_id] = variables
+                port_names.append(port_id)
 
-        if remaining_inputs:
-            default_input_port_id = self.parameters['default_input_port_name']
-            self.port_assignments[default_input_port_id] = remaining_inputs
-            self.input_ports.append(default_input_port_id)
+        if remaining_variables:
+            default_input_port_id = default_port_name
+            port_assignments[default_input_port_id] = all_variables
+            port_names.append(default_input_port_id)
+        return port_names, port_assignments
 
-        if self.parameters['output_ports']:
-            for port_id, variables in self.parameters['output_ports'].items():
-                if isinstance(variables, str):
-                    variables = [variables]
-                for variable_id in variables:
-                    assert variable_id in all_outputs, \
-                        f"port assigments: variable id '{variable_id}' is not in the available outputs: {all_outputs} "
-                    remaining_outputs.remove(variable_id)
-                self.port_assignments[port_id] = variables
-                self.output_ports.append(port_id)
-
-        if remaining_outputs:
-            default_output_port_id = self.parameters['default_output_port_name']
-            self.port_assignments[default_output_port_id] = remaining_outputs
-            self.output_ports.append(default_output_port_id)
 
     def initial_state(self, config=None):
         """
@@ -182,8 +185,9 @@ class BiosimulatorProcess(Process):
         initial_state = {
             'global_time': 0
         }
+        # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
         input_values = {
-            input_state.id: float(input_state.new_value)  # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
+            input_state.id: float(input_state.new_value)
             for input_state in self.inputs}
 
         # run task to view initial values
@@ -220,6 +224,7 @@ class BiosimulatorProcess(Process):
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
                 variable: {
+                    # TODO (Eran) -- need more configurable input/output values.
                     '_default': self.parameters['default_output_value'] if
                     port_id in self.output_ports else self.parameters['default_input_value'],
                     '_updater': 'accumulate',
@@ -248,7 +253,7 @@ class BiosimulatorProcess(Process):
             self.task,
             self.outputs,
             preprocessed_task=self.preprocessed_task,
-            config=self.config,
+            config=self.sed_task_config,
         )
         return raw_results
 
