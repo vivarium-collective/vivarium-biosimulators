@@ -3,10 +3,12 @@
 BioSimulator Process
 ====================
 
-`BiosimulatorProcess` is a general Vivarium :term:`process class` that can load any
+``BiosimulatorProcess`` is a general Vivarium :term:`process class` that can load any
 BioSimulator and model, and run it.
 
-KISAO: https://bioportal.bioontology.org/ontologies/KISAO
+References:
+ * KISAO: https://bioportal.bioontology.org/ontologies/KISAO
+
 """
 
 import importlib

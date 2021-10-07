@@ -1,38 +1,40 @@
+"""
+Test ODE_FBA by loading biosimulators_tellurium and biosimulators_cobrapy
+"""
+
 import numpy as np
 from biosimulators_utils.sedml.data_model import ModelLanguage
 from vivarium.core.composition import simulate_composite
 from vivarium.core.engine import pf
-
 from vivarium_biosimulators.composites.ode_fba import ODE_FBA
 from vivarium_biosimulators.library.mappings import tellurium_mapping
+from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_iAF1260b_PATH
 
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/LacOperon_deterministic.xml'
-BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
-# SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000244_url.xml'
+
+BIGG_MODEL_PATH = BIGG_iAF1260b_PATH
+SBML_MODEL_PATH = MILLARD2016_PATH
 
 
 def test_tellurium_cobrapy(
-        tellurium_model=SBML_MODEL_PATH,
-        cobra_model=BIGG_MODEL_PATH,
         total_time=2.,
 ):
     import warnings;
     warnings.filterwarnings('ignore')
 
     # get mapping between inputs (initial variables ids) and output variables in tellurium
-    tellurium_input_output_map = tellurium_mapping(tellurium_model)
+    tellurium_input_output_map = tellurium_mapping(SBML_MODEL_PATH)
 
     # ode_fba configuration
     config = {
         'ode_config': {
             'biosimulator_api': 'biosimulators_tellurium',
-            'model_source': tellurium_model,
+            'model_source': SBML_MODEL_PATH,
             'simulation': 'uniform_time_course',
             'model_language': ModelLanguage.SBML.value,
         },
         'fba_config': {
             'biosimulator_api': 'biosimulators_cobrapy',
-            'model_source': cobra_model,
+            'model_source': BIGG_MODEL_PATH,
             'simulation': 'steady_state',
             'model_language': ModelLanguage.SBML.value,
             'default_output_value': np.array(0.),
@@ -82,10 +84,16 @@ def test_tellurium_cobrapy(
         'initial_state': initial_state,
         'display_info': False}
     output = simulate_composite(ode_fba_composite, sim_settings)
+    return output
+
+
+
+def main():
+    output = test_tellurium_cobrapy()
 
     print(pf(output))
 
 
 # run with python vivarium_biosimulators/experiments/tellurium_cobra.py
 if __name__ == '__main__':
-    test_tellurium_cobrapy()
+    main()

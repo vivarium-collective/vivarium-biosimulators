@@ -12,14 +12,14 @@ from vivarium.plots.simulation_output import plot_simulation_output
 from biosimulators_utils.sedml.data_model import ModelLanguage
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium_biosimulators.library.mappings import remove_multi_update
+from vivarium_biosimulators.models.model_paths import BIGG_iAF1260b_PATH
 
 
 
-BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
+BIGG_MODEL_PATH = BIGG_iAF1260b_PATH
 
 
 def test_cobra_process(
-        model_source=BIGG_MODEL_PATH,
         total_time=2.,
 ):
     import warnings;
@@ -27,7 +27,7 @@ def test_cobra_process(
 
     config = {
         'biosimulator_api': 'biosimulators_cobrapy',
-        'model_source': model_source,
+        'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
         'algorithm': {

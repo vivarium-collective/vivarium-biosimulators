@@ -13,26 +13,24 @@ from vivarium.plots.simulation_output import plot_simulation_output
 from vivarium_biosimulators.library.mappings import tellurium_mapping
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium_biosimulators.library.mappings import remove_multi_update
+from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH
 
 
-
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000244_url.xml'
-# SBML_MODEL_PATH = 'vivarium_biosimulators/models/LacOperon_deterministic.xml'
+SBML_MODEL_PATH = MILLARD2016_PATH
 
 
 def test_tellurium_process(
-        model_source=SBML_MODEL_PATH,
-        total_time=5.,
+        total_time=10.,
         time_step=1.,
 ):
     import warnings; warnings.filterwarnings('ignore')
 
     # update ports based on input_output_map
-    input_output_map = tellurium_mapping(model_source)
+    input_output_map = tellurium_mapping(SBML_MODEL_PATH)
     input_variable_names = list(input_output_map.keys())
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
-        'model_source': model_source,
+        'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
         'input_ports': {
@@ -88,9 +86,19 @@ def test_tellurium_process(
 
 
 def main():
-    output = test_tellurium_process(total_time=1, time_step=0.1)
-    settings = {'max_rows': 10}
-    plot_simulation_output(output, settings, out_dir='out', filename='tellurium')
+    total_time = 30
+    plot_settings = {'max_rows': 10}
+
+    for dt in [1e-1, 1e0, 2e0]:
+        output = test_tellurium_process(
+            total_time=total_time,
+            time_step=dt)
+        dt_str = str(dt).replace('.', ':')
+        plot_simulation_output(
+            output,
+            plot_settings,
+            out_dir='out',
+            filename=f'tellurium_dt={dt_str}_ttotal={total_time}')
 
 
 # run with python vivarium_biosimulators/experiments/test_tellurium.py
