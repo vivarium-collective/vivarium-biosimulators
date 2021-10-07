@@ -15,7 +15,8 @@ BIGG_MODEL_PATH = BIGG_iAF1260b_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
-    'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of target?
+    'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_upper_bound',  # use flux of target?
+    # 'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of target?
     # 'dynamics_species_GLCx': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of source?
 }
 # FLUX_TO_BOUNDS_MAP = {
@@ -59,11 +60,13 @@ def test_tellurium_cobrapy(
         'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
+        'default_store_name': 'state',
     }
     ode_fba_composer = ODE_FBA(config)
 
     # get initial state from composer
     initial_state = ode_fba_composer.initial_state()
+    initial_state['bounds']['value_parameter_R_EX_glc__D_e_upper_bound'] = 0.0
 
     # generate the composite
     ode_fba_composite = ode_fba_composer.generate()
@@ -105,6 +108,11 @@ def main():
     settings = {
         'max_rows': 25,
         'remove_flat': True,
+        'remove_first_timestep': True,
+        # 'show_state': [
+        #     ('state', 'flux_reaction_R_EX_glc__D_e'),
+        #     ('state', 'flux_reaction_R_GLCptspp'),
+        # ]
     }
     plot_simulation_output(
         output,

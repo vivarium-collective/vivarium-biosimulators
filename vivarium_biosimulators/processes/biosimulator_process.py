@@ -47,8 +47,6 @@ class BiosimulatorProcess(Process):
         - default_output_port_name (str): the default output port name for variables not specified by output_ports
         - emit_ports (list): a list of the ports whose values are emitted
         - time_step (float): the synchronization time step
-
-    # TODO -- configurable default types for individual variables
     """
     
     defaults = {
