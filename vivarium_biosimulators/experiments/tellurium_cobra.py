@@ -21,7 +21,7 @@ FLUX_TO_BOUNDS_MAP = {
 }
 
 
-def test_tellurium_cobrapy(
+def run_tellurium_cobrapy(
         total_time=2.,
         verbose=False,
 ):
@@ -96,7 +96,7 @@ def test_tellurium_cobrapy(
 
 
 def main():
-    output = test_tellurium_cobrapy(
+    output = run_tellurium_cobrapy(
         total_time=20.,
         verbose=True,
     )
