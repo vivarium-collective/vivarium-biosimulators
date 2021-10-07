@@ -7,80 +7,100 @@ Execute by running: ``python vivarium_biosimulators/processes/test_tellurium.py`
 
 from biosimulators_utils.sedml.data_model import ModelLanguage
 
+from vivarium.core.engine import Engine, pf
+from vivarium.core.composer import Composite
+from vivarium.plots.simulation_output import plot_simulation_output
 from vivarium_biosimulators.library.mappings import tellurium_mapping
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
-from vivarium.core.composition import simulate_process
-from vivarium.core.engine import pf
+from vivarium_biosimulators.library.mappings import remove_multi_update
+from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH
 
-SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
+
+SBML_MODEL_PATH = MILLARD2016_PATH
 
 
 def test_tellurium_process(
-        model_source=SBML_MODEL_PATH,
+        total_time=10.,
+        time_step=1.,
 ):
     import warnings; warnings.filterwarnings('ignore')
 
     # update ports based on input_output_map
-    input_output_map = tellurium_mapping(model_source)
+    input_output_map = tellurium_mapping(SBML_MODEL_PATH)
     input_variable_names = list(input_output_map.keys())
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
-        'model_source': model_source,
+        'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
         'input_ports': {
             'concentrations': input_variable_names,
-            'size': 'init_size_compartment_compartment',
         },
-        'output_ports': {
-            'time': 'time'
-        }
+        'emit_ports': ['concentrations', 'outputs'],
+        'time_step': time_step,
     }
-    
+
     # make the process
     process = BiosimulatorProcess(config)
 
-    # declare the topology
-    # connect initial concentrations to outputs
+    # make a composite with a topology
+    # connects initial concentrations to outputs
     rename_concs = {
         input: (output,)
         for input, output in input_output_map.items()
     }
-    topology = {
-        'concentrations': {
-            '_path': ('concentrations',),
-            **rename_concs
+    composite = Composite({
+        'processes': {
+            'tellurium': process
         },
-        'outputs': ('concentrations',),
-    }
+        'topology': {
+            'tellurium': {
+                'concentrations': {
+                    '_path': ('concentrations',),
+                    **rename_concs
+                },
+                'outputs': ('concentrations',),
+                'inputs': ('state',),
+                'global': ('global',),
+            }
+        }
+    })
 
-    # assert that port_assignment works
-    process_initial_state = process.initial_state()
-    assert list(process_initial_state['concentrations'].keys()) == input_variable_names
+    # get initial state from composite
+    initial_state = composite.initial_state()
+    initial_state = remove_multi_update(initial_state)
 
-    # test a process update
-    update = process.next_update(1, process_initial_state)
-    assert sum(update['outputs'].values()) > 0
-
-    # rename initial concentrations variables according to input_output_map
-    init_concentrations = process_initial_state['concentrations']
-    process_initial_state['concentrations'] = {
-        input_output_map[input_name]: value
-        for input_name, value in init_concentrations.items()
-    }
-    del process_initial_state['outputs']  # outputs port maps to concentration
-
+    # make an experiment
+    experiment = Engine(
+        processes=composite.processes,
+        topology=composite.topology,
+        initial_state=initial_state,
+    )
     # run the simulation
-    sim_settings = {
-        'total_time': 10.,
-        'topology': topology,
-        'initial_state': process_initial_state,
-        'display_info': False,
-    }
-    output = simulate_process(process, sim_settings)
+    experiment.update(total_time)
 
-    print(pf(output))
+    # get the data
+    output = experiment.emitter.get_timeseries()
+    # print(pf(output['concentrations']))
+    return output
+
+
+def main():
+    total_time = 30
+    plot_settings = {'max_rows': 10}
+
+    for dt in [1e-1, 1e0, 2e0]:
+        output = test_tellurium_process(
+            total_time=total_time,
+            time_step=dt)
+        dt_str = str(dt).replace('.', ':')
+        plot_simulation_output(
+            output,
+            plot_settings,
+            out_dir='out/tellurium',
+            filename=f'tellurium_dt={dt_str}_ttotal={total_time}')
+
 
 # run with python vivarium_biosimulators/experiments/test_tellurium.py
 if __name__ == '__main__':
-    test_tellurium_process()
+    main()

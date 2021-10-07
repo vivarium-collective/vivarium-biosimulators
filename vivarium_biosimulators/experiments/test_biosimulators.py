@@ -30,14 +30,18 @@ BIOSIMULATOR_SPECS = [
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
         'default_output_value': np.array(0.),
-        'kisao_id': 'KISAO_0000437',
+        'algorithm': {
+            'kisao_id': 'KISAO_0000437',
+        }
     },
     {
         'biosimulator_api': 'biosimulators_cbmpy',
         'model_source': BIGG_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
-        'kisao_id': 'KISAO_0000437',
+        'algorithm': {
+            'kisao_id': 'KISAO_0000437',
+        }
     },
     {
         'biosimulator_api': 'biosimulators_bionetgen',
@@ -62,7 +66,9 @@ BIOSIMULATOR_SPECS = [
         'model_source': RBA_MODEL_PATH,
         'model_language': ModelLanguage.RBA.value,
         'simulation': 'steady_state',
-        'kisao_id': 'KISAO_0000669',
+        'algorithm': {
+            'kisao_id': 'KISAO_0000669',
+        }
     },
     {
         'biosimulator_api': 'biosimulators_xpp',
