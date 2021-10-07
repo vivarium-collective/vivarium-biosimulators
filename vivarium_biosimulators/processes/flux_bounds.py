@@ -19,6 +19,7 @@ class FluxBoundsConverter(Process):
         'ode_process': None,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
+        'time_unit': 's',
     }
 
     def __init__(self, parameters=None):
@@ -33,6 +34,7 @@ class FluxBoundsConverter(Process):
         # unit conversion
         self.flux_unit = units(self.parameters['flux_unit'])
         self.bounds_unit = units(self.parameters['bounds_unit'])
+        self.time_unit = units(self.parameters['time_unit'])
 
     def initial_state(self, config=None):
         state = self.ode_process.initial_state(config)
@@ -62,7 +64,7 @@ class FluxBoundsConverter(Process):
         """
         flux_bounds = {
             self.flux_to_bound_map[flux_id]: (
-                flux_value / dt * (self.flux_unit / units.s)
+                flux_value / dt * (self.flux_unit / self.time_unit)
             ).to(self.bounds_unit).magnitude
             for flux_id, flux_value in fluxes.items()
         }

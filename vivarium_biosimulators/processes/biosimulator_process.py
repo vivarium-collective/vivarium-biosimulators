@@ -268,15 +268,15 @@ class BiosimulatorProcess(Process):
             values[result_id] = self.process_result(result, time_course_index)
         return values
 
-    def next_update(self, interval, states):
+    def next_update(self, interval, state):
 
         # collect the inputs
         input_values = {}
         for port_id in self.input_ports:
-            input_values.update(states[port_id])
+            input_values.update(state[port_id])
 
         # set the simulation time
-        global_time = states['global']['time']
+        global_time = state['global']['time']
 
         # run task
         raw_results = self.run_task(input_values, global_time, interval)
@@ -291,7 +291,7 @@ class BiosimulatorProcess(Process):
                     raw_result = raw_results[variable_id]
                     value = self.process_result(raw_result)
 
-                    # TODO -- different get_delta for different data types?
+                    # TODO (ERAN) -- different get_delta for different data types?
                     update[port_id][variable_id] = get_delta(
-                        states[port_id][variable_id], value)
+                        state[port_id][variable_id], value)
         return update
