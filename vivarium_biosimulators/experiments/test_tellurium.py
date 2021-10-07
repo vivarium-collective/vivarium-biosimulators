@@ -97,7 +97,7 @@ def main():
         plot_simulation_output(
             output,
             plot_settings,
-            out_dir='out',
+            out_dir='out/tellurium',
             filename=f'tellurium_dt={dt_str}_ttotal={total_time}')
 
 

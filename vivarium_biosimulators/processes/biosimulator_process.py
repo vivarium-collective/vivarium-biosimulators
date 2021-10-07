@@ -146,9 +146,9 @@ class BiosimulatorProcess(Process):
         )
         self.port_assignments.update(output_assignments)
 
-        # precalculate initial state
+        # pre-calculate initial state
+        # it is used to determine variable types in port_schema
         self.saved_initial_state = self.make_initial_state()
-
 
     def get_port_assignment(
             self,

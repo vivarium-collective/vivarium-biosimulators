@@ -78,7 +78,12 @@ def test_cobra_process(
 def main():
     output = test_cobra_process()
     settings = {'max_rows': 25}
-    plot_simulation_output(output, settings, out_dir='out', filename='cobrapy')
+    plot_simulation_output(
+        output,
+        settings,
+        out_dir='out/cobrapy',
+        filename='cobrapy'
+    )
 
 
 # run with python vivarium_biosimulators/experiments/test_cobra.py

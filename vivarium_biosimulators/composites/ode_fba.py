@@ -8,55 +8,79 @@ and wires them together so that the ODE model's flux outputs are used to constra
 model's flux bound inputs.
 """
 
-from vivarium.core.process import Deriver
+from vivarium.core.process import Process
 from vivarium.core.composer import Composer
+from vivarium.library.units import units
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium_biosimulators.library.mappings import remove_multi_update
 
 
-class FluxBoundsConverter(Deriver):
-    """Converts fluxes from ode simulator to flux bounds for fba simulator"""
+class FluxBoundsConverter(Process):
+    """A wrapper for an ode process
+
+    Converts the ode's output fluxes to flux bounds inputs for an fba process.
+
+    TODO (ERAN) -- adjust both upper and lower bounds?
+    """
     defaults = {
-        'flux_to_bound_map': [],
-        'ode_sync_step': None,  # TODO -- use the ODE simulator's timestep
+        'flux_to_bound_map': {},
+        'ode_process': None,
+        'flux_unit': 'mol/L',
+        'bounds_unit': 'mmol/L/s',
     }
+
     def __init__(self, parameters=None):
         super().__init__(parameters)
         self.flux_to_bound_map = self.parameters['flux_to_bound_map']
+        self.ode_process = self.parameters['ode_process']
+        self.inputs = self.ode_process.inputs
+        self.outputs = self.ode_process.outputs
+        self.input_ports = self.ode_process.input_ports
+        self.output_ports = self.ode_process.output_ports
+
+        # unit conversion
+        self.flux_unit = units(self.parameters['flux_unit'])
+        self.bounds_unit = units(self.parameters['bounds_unit'])
+
+    def initial_state(self, config=None):
+        state = self.ode_process.initial_state(config)
+        state['bounds'] = {}
+        return state
+
+    def calculate_timestep(self, states):
+        return self.ode_process.calculate_timestep(states)
 
     def ports_schema(self):
-        if self.flux_to_bound_map:
-            return {
-                'fluxes': {
-                    rxn_id: {'_default': 0.}
-                    for rxn_id in self.flux_to_bound_map.keys()
-                },
-                'bounds': {
-                    rxn_id: {'_default': 0., '_updater': 'set'}
-                    for rxn_id in self.flux_to_bound_map.values()
-                },
-            }
-        return {
-            'fluxes': {},
-            'bounds': {},
+        """
+        Use the ode process's ports, with an added 'bounds' port to output the flux bounds.
+        """
+        ports = self.ode_process.get_schema()
+        ports['bounds'] = {}
+        for rxn_id in ports['fluxes'].keys():
+            bound_id = self.flux_to_bound_map[rxn_id]
+            ports['bounds'][bound_id] = {'_updater': 'set'}
+        return ports
+
+    def convert_fluxes(self, fluxes, dt):
+        """
+        divide by the time step to get flux bounds, and convert to bounds unit
+        """
+        flux_bounds = {
+            self.flux_to_bound_map[flux_id]: (
+                flux_value / dt * (self.flux_unit / units.s)
+            ).to(self.bounds_unit).magnitude
+            for flux_id, flux_value in fluxes.items()
         }
+        return flux_bounds
 
-    def next_update(self, timestep, states):
-
-        # TODO -- use ode_sync_step to get flux
-
-        if self.flux_to_bound_map:
-            flux_bounds = {
-                self.flux_to_bound_map[flux_id]: flux_value
-                for flux_id, flux_value in states['fluxes'].items()
-            }
-            return {'bounds': flux_bounds}
-        return {}
-
+    def next_update(self, interval, states):
+        update = self.ode_process.next_update(interval, states)
+        update['bounds'] = self.convert_fluxes(update['fluxes'], interval)
+        return update
 
 
 class ODE_FBA(Composer):
-    """ Makes an ODE/FBA Composite
+    """ Generates an ODE/FBA Composite
 
     Config:
         - ode_config (dict): configuration for the ode biosimulator.
@@ -71,6 +95,8 @@ class ODE_FBA(Composer):
             same variables (i.e. inputs with name 'init_conc_species_*' might need to map to 'dynamics_species_*').
         - default_store (str): The name of a default store, to use if a
             port mapping is not declared by ode_topology or fba_topology.
+        - flux_unit (str): The unit of the ode process' flux output
+        - bounds_unit (str): The unit of the fba process' flux bounds input
     """
     defaults = {
         'ode_config': None,
@@ -78,7 +104,10 @@ class ODE_FBA(Composer):
         'flux_to_bound_map': None,
         'ode_input_to_output_map': None,
         'default_store': 'state',
+        'flux_unit': 'mol/L',
+        'bounds_unit': 'mmol/L/s',
     }
+
     def __init__(self, config=None):
         super().__init__(config)
         self.flux_to_bound_map = self.config['flux_to_bound_map']
@@ -93,30 +122,35 @@ class ODE_FBA(Composer):
 
     def generate_processes(self, config):
 
-        # make the ode config
+        # make the ode process
         ode_full_config = {
             'output_ports': {'fluxes': self.flux_ids},
             'emit_ports': ['outputs', 'fluxes'],
             **config['ode_config'],
         }
+        ode_process = BiosimulatorProcess(ode_full_config)
 
-        # make the fba config
+        # make the fba process
         fba_full_config = {
             'input_ports': {'bounds': self.bounds_ids},
             'emit_ports': ['outputs', 'bounds'],
             **config['fba_config'],
         }
+        fba_process = BiosimulatorProcess(fba_full_config)
 
-        # make the flux bounds config
+        # make the ode flux bounds converter process
         flux_bounds_config = {
+            'ode_process': ode_process,
             'flux_to_bound_map': self.flux_to_bound_map,
+            'flux_unit': self.parameters['flux_unit'],
+            'bounds_unit': self.parameters['bounds_unit'],
         }
+        ode_flux_converter = FluxBoundsConverter(flux_bounds_config)
 
         # return initialized processes
         processes = {
-            'ode': BiosimulatorProcess(ode_full_config),
-            'fba': BiosimulatorProcess(fba_full_config),
-            'flux_bounds': FluxBoundsConverter(flux_bounds_config),
+            'ode': ode_flux_converter,
+            'fba': fba_process,
         }
         return processes
 
@@ -143,6 +177,7 @@ class ODE_FBA(Composer):
         topology = {
             'ode': {
                 'fluxes': ('fluxes',),
+                'bounds': ('bounds',),
                 'inputs': ode_input_topology,
                 'outputs': (self.default_store,),
             },
@@ -150,10 +185,6 @@ class ODE_FBA(Composer):
                 'bounds': ('bounds',),
                 'inputs': (self.default_store,),
                 'outputs': (self.default_store,),
-            },
-            'flux_bounds': {
-                'fluxes': ('fluxes',),
-                'bounds': ('bounds',),
             },
         }
         return topology
