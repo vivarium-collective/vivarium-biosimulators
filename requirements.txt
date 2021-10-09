@@ -158,7 +158,6 @@ typing-extensions==3.10.0.2
 url-normalize==1.4.3
 urllib3==1.26.6
 validators==0.18.2
-vivarium-biosimulators==0.0.1
 vivarium-core==0.3.8
 wcwidth==0.2.5
 webencodings==0.5.1
