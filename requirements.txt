@@ -1,5 +1,5 @@
 airspeed==0.5.17
-antimony==2.12.0
+antimony==2.12.0.2
 anyio==3.3.0
 appdirs==1.4.4
 appnope==0.1.2
