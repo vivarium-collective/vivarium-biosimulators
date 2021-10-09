@@ -58,6 +58,8 @@ class BiosimulatorProcess(Process):
         'output_ports': None,
         'default_input_port_name': 'inputs',
         'default_output_port_name': 'outputs',
+        'default_input_value': 0.,  # TODO -- scalar (int, float, bool), depends on model language
+        'default_output_value': 0.,  # TODO -- if steady_state then np scalar
         'emit_ports': ['outputs'],
         'algorithm': {
             'kisao_id': 'KISAO_0000019',  # default is CVODE
@@ -182,7 +184,7 @@ class BiosimulatorProcess(Process):
         extract initial state according to port_assignments
         """
         initial_state = {
-            'global': {'time': 0.0}
+            'global_time': 0
         }
         # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
         input_values = {
