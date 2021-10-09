@@ -10,8 +10,7 @@ COPY . /app
 RUN git clone https://github.com/biosimulators/Biosimulators_test_suite.git
 RUN pip install Biosimulators_test_suite
 ## vivarium-biosimulators requirements
-RUN pip install vivarium-core
-# RUN pip install -r requirements.txt
+RUN pip install -r docker_requirements.txt
 run pip install -r update_requirements.txt --upgrade
 
 # start mock up server for output
