@@ -135,7 +135,7 @@ rich==10.9.0
 rrplugins==2.0.4
 ruamel.yaml==0.17.16
 ruamel.yaml.clib==0.2.6
-sbml2matlab==1.2.0
+sbml2matlab==1.2.3.1
 scipy==1.7.1
 seaborn==0.11.2
 Send2Trash==1.8.0
