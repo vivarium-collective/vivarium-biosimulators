@@ -18,7 +18,7 @@ from vivarium.core.process import Process
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
-    Task, Algorithm, Model, ModelAttributeChange, 
+    Task, Algorithm, Model, ModelAttributeChange, ModelLanguage,
     UniformTimeCourseSimulation, SteadyStateSimulation
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
@@ -138,6 +138,12 @@ class BiosimulatorProcess(Process):
             algorithm_kisao_id=simulation.algorithm.kisao_id,
             native_data_types=True,
             native_ids=True,
+            # change_level=Task,
+            # model_language_options={
+            #     ModelLanguage.SBML: {
+            #         'include_reaction_fluxes_in_kinetic_simulation_variables': False,  # record predicted fluxes
+            #     }
+            # }
         )
 
         # TODO (ERAN) -- go through inputs and outputs, assign ids, use targets for meaning
