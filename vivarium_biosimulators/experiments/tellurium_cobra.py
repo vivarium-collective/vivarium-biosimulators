@@ -14,9 +14,9 @@ BIGG_MODEL_PATH = BIGG_iAF1260b_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
-    # 'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_upper_bound',  # use flux of target?
+    # 'GLCp': 'R_EX_glc__D_e_upper_bound',  # use flux of target?
     'GLCp': 'R_EX_glc__D_e_lower_bound',  # use flux of target?
-    # 'dynamics_species_GLCx': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of source?
+    # 'GLCx': 'R_EX_glc__D_e_lower_bound',  # use flux of source?
 }
 
 
@@ -107,14 +107,14 @@ def main():
     )
 
     # plot specific output variables
+    fluxes = [('fluxes', flux) for flux, bound in FLUX_TO_BOUNDS_MAP.items()]
+    bounds = [('bounds', bound) for flux, bound in FLUX_TO_BOUNDS_MAP.items()]
     plot_variables(
         output,
         variables=[
-            ('fluxes', 'GLCp'),
-            ('bounds', 'R_EX_glc__D_e_lower_bound'),
             ('state', 'R_EX_glc__D_e'),
             ('state', 'GLCx'),
-        ],
+        ] + fluxes + bounds,
         out_dir='out/tellurium_cobrapy',
         filename='tellurium_cobrapy_vars',
     )

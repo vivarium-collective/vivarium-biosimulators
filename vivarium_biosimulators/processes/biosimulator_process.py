@@ -118,6 +118,7 @@ class BiosimulatorProcess(Process):
         self.input_id_target_map = {}
         self.input_id_target_namespace = {}
         for variable in self.inputs:
+            # self.input_id_target_map[variable.id] = variable.target
             var = variable.id
             if '_lower_bound' in var:
                 var2 = var.replace('_lower_bound', '')
@@ -258,6 +259,9 @@ class BiosimulatorProcess(Process):
                 new_value=variable_value,
                 target_namespaces=self.input_id_target_namespace[variable_id],
             ))
+
+        # if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
+        #     import ipdb; ipdb.set_trace()
 
         # set the simulation time
         self.task.simulation.initial_time = initial_time
