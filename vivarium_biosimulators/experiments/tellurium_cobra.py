@@ -7,10 +7,10 @@ from vivarium.core.composition import simulate_composite
 from vivarium.core.engine import pf
 from vivarium.plots.simulation_output import plot_simulation_output, plot_variables
 from vivarium_biosimulators.composites.ode_fba import ODE_FBA
-from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_iAF1260b_PATH
+from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_ECOLI_CORE_PATH
 
 
-BIGG_MODEL_PATH = BIGG_iAF1260b_PATH
+BIGG_MODEL_PATH = BIGG_ECOLI_CORE_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
@@ -22,6 +22,7 @@ FLUX_TO_BOUNDS_MAP = {
 
 def test_tellurium_cobrapy(
         total_time=2.,
+        time_step=1.,
         verbose=False,
 ):
     import warnings;
@@ -36,7 +37,8 @@ def test_tellurium_cobrapy(
             'model_language': ModelLanguage.SBML.value,
             'algorithm': {
                 'kisao_id': 'KISAO_0000019',
-            }
+            },
+            'time_step': time_step,
         },
         'fba_config': {
             'biosimulator_api': 'biosimulators_cobrapy',
@@ -45,7 +47,7 @@ def test_tellurium_cobrapy(
             'model_language': ModelLanguage.SBML.value,
             'algorithm': {
                 'kisao_id': 'KISAO_0000437',
-            }
+            },
         },
         'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
@@ -91,8 +93,9 @@ def test_tellurium_cobrapy(
 
 def main():
     output = test_tellurium_cobrapy(
-        total_time=20.,
-        verbose=True,
+        total_time=3.,
+        time_step=0.1,
+        verbose=False,
     )
 
     # plot non-static output

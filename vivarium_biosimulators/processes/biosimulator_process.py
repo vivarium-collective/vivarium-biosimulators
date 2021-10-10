@@ -33,6 +33,32 @@ def get_delta(before, after):
     return after - before
 
 
+def get_port_assignment(
+        ports_dict,
+        variables,
+        default_port_name,
+):
+    port_assignments = {}
+    port_names = []
+    all_variables = [input_state.id for input_state in variables]
+    remaining_variables = copy.deepcopy(all_variables)
+    if ports_dict:
+        for port_id, variables in ports_dict.items():
+            if isinstance(variables, str):
+                variables = [variables]
+            for variable_id in variables:
+                assert variable_id in all_variables, \
+                    f"'{variable_id}' is not in the available in variable ids: {all_variables} "
+                remaining_variables.remove(variable_id)
+            port_assignments[port_id] = variables
+            port_names.append(port_id)
+
+    if remaining_variables:
+        port_assignments[default_port_name] = remaining_variables
+        port_names.append(default_port_name)
+    return port_names, port_assignments
+
+
 class BiosimulatorProcess(Process):
     """ A Vivarium wrapper for any BioSimulator
 
@@ -132,35 +158,31 @@ class BiosimulatorProcess(Process):
                 self.input_id_target_map[variable.id] = variable.target
             self.input_id_target_namespace[variable.id] = variable.target_namespaces
 
-        # TODO (ERAN) -- why do we need nonnative_outputs for preprocess_sed_task in tellurium?
+        # TODO (ERAN) -- why do we need sed_outputs for preprocess_sed_task in tellurium?
         # assign outputs to task
-        _, _, nonnative_outputs, _ = get_parameters_variables_outputs_for_simulation(
+        _, _, self.sed_outputs, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
         )
-        for variable in nonnative_outputs:
+        for variable in self.sed_outputs:
             variable.task = self.task
 
         # pre-process
         self.sed_task_config = Config(LOG=False)
-        self.preprocessed_task = self.preprocess_sed_task(
-            self.task,
-            nonnative_outputs,
-            config=self.sed_task_config,
-        )
+        self.preprocessed_task = self.preprocess()
 
         # port assignments from parameters
         default_input_port = self.parameters['default_input_port_name']
         self.port_assignments = {}
-        self.input_ports, input_assignments = self.get_port_assignment(
+        self.input_ports, input_assignments = get_port_assignment(
             self.parameters['input_ports'],
             self.inputs,
             default_input_port,
         )
         self.port_assignments.update(input_assignments)
-        self.output_ports, output_assignments = self.get_port_assignment(
+        self.output_ports, output_assignments = get_port_assignment(
             self.parameters['output_ports'],
             self.outputs,
             self.parameters['default_output_port_name'],
@@ -170,32 +192,6 @@ class BiosimulatorProcess(Process):
         # pre-calculate initial state
         # it is used to determine variable types in port_schema
         self.saved_initial_state = self.make_initial_state()
-
-    def get_port_assignment(
-            self,
-            ports_dict,
-            variables,
-            default_port_name,
-    ):
-        port_assignments = {}
-        port_names = []
-        all_variables = [input_state.id for input_state in variables]
-        remaining_variables = copy.deepcopy(all_variables)
-        if ports_dict:
-            for port_id, variables in ports_dict.items():
-                if isinstance(variables, str):
-                    variables = [variables]
-                for variable_id in variables:
-                    assert variable_id in all_variables, \
-                        f"'{variable_id}' is not in the available in variable ids: {all_variables} "
-                    remaining_variables.remove(variable_id)
-                port_assignments[port_id] = variables
-                port_names.append(port_id)
-
-        if remaining_variables:
-            port_assignments[default_port_name] = remaining_variables
-            port_names.append(default_port_name)
-        return port_names, port_assignments
 
     def initial_state(self, config=None):
         return self.saved_initial_state
@@ -249,6 +245,14 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
+    def preprocess(self):
+        preprocessed_task = self.preprocess_sed_task(
+            self.task,
+            self.sed_outputs,
+            config=self.sed_task_config,
+        )
+        return preprocessed_task
+
     def run_task(self, inputs, interval, initial_time=0.):
 
         # update model based on input
@@ -260,6 +264,8 @@ class BiosimulatorProcess(Process):
                 target_namespaces=self.input_id_target_namespace[variable_id],
             ))
 
+        # TODO -- optional reprocess?
+        # self.preprocessed_task = self.preprocess()
         # if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
         #     import ipdb; ipdb.set_trace()
 

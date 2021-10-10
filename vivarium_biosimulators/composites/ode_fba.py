@@ -52,8 +52,11 @@ class ODE_FBA(Composer):
         return remove_multi_update(initial_state)
 
     def generate_processes(self, config):
+        """
+        generate the fba process, ode process, and ode flux to bounds converter process.
+        """
 
-        # make the fba process
+        # make the fba process, and bounds port
         fba_full_config = {
             'input_ports': {'bounds': self.bounds_ids},
             'emit_ports': ['outputs', 'bounds'],
@@ -61,7 +64,7 @@ class ODE_FBA(Composer):
         }
         fba_process = BiosimulatorProcess(fba_full_config)
 
-        # make the ode process
+        # make the ode process, and fluxes port
         ode_full_config = {
             'output_ports': {'fluxes': self.flux_ids},
             'emit_ports': ['outputs', 'fluxes'],
@@ -69,7 +72,8 @@ class ODE_FBA(Composer):
         }
         ode_process = BiosimulatorProcess(ode_full_config)
 
-        # make the ode flux bounds converter process
+        # make the ode flux bounds converter process,
+        # which adds a bounds port on top of the ode_process
         flux_bounds_config = {
             'ode_process': ode_process,
             'flux_to_bound_map': self.flux_to_bound_map,
@@ -86,13 +90,12 @@ class ODE_FBA(Composer):
         return processes
 
     def generate_topology(self, config):
-
-        # put together the composite topology
+        """ put together the composite topology """
         topology = {
             'ode': {
                 'fluxes': ('fluxes',),
                 'bounds': ('bounds',),
-                'inputs': (self.default_store,),  # ode_input_topology,
+                'inputs': (self.default_store,),
                 'outputs': (self.default_store,),
             },
             'fba': {
