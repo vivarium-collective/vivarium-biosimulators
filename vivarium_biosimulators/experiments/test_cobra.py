@@ -3,6 +3,12 @@ Test BiosimulatorProcess's COBRApy API
 ======================================
 
 Execute by running: ``python vivarium_biosimulators/processes/test_cobra.py``
+
+TODO:
+ - test parsimonious fba: KISAO_0000528
+ - test geometric fba: KISAO_0000527
+ - test linear moma fba: KISAO_0000579  (not yet mapped to methods in cobrapy)
+ - test quadratic moma fba: KISAO_0000593  (not yet mapped to methods in cobrapy)
 """
 import os
 
@@ -23,6 +29,7 @@ def test_cobra_process(
     total_time=2.,
     model_source=BIGG_iAF1260b_PATH,
     change_state={},
+    kisao_id='KISAO_0000437',
 ):
     import warnings;
     warnings.filterwarnings('ignore')
@@ -33,7 +40,7 @@ def test_cobra_process(
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
         'algorithm': {
-            'kisao_id': 'KISAO_0000437',
+            'kisao_id': kisao_id,
         }
     }
 

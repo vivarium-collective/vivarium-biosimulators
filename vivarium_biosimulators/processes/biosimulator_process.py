@@ -140,38 +140,35 @@ class BiosimulatorProcess(Process):
             native_ids=True,
         )
 
+        # TODO (ERAN) -- go through inputs and outputs, assign ids, use targets for meaning
+        self.outputs[0].id = 'time'
+
         # make an map of input ids to targets
         self.input_id_target_map = {}
         self.input_id_target_namespace = {}
         for variable in self.inputs:
-            # self.input_id_target_map[variable.id] = variable.target
-            var = variable.id
-            if '_lower_bound' in var:
-                var2 = var.replace('_lower_bound', '')
-                self.input_id_target_map[
-                    var] = f"/sbml:sbml/sbml:model/sbml:listOfReactions/sbml:reaction[@id='{var2}']/@fbc:lowerFluxBound"
-            elif '_upper_bound' in var:
-                var2 = var.replace('_upper_bound', '')
-                self.input_id_target_map[
-                    var] = f"/sbml:sbml/sbml:model/sbml:listOfReactions/sbml:reaction[@id='{var2}']/@fbc:upperFluxBound"
-            else:
-                self.input_id_target_map[variable.id] = variable.target
+            self.input_id_target_map[variable.id] = variable.target
             self.input_id_target_namespace[variable.id] = variable.target_namespaces
 
-        # TODO (ERAN) -- why do we need sed_outputs for preprocess_sed_task in tellurium?
-        # assign outputs to task
-        _, _, self.sed_outputs, _ = get_parameters_variables_outputs_for_simulation(
-            model_filename=model.source,
-            model_language=model.language,
-            simulation_type=simulation.__class__,
-            algorithm_kisao_id=simulation.algorithm.kisao_id,
-        )
-        for variable in self.sed_outputs:
+        # add outputs to task
+        for variable in self.outputs:
             variable.task = self.task
+
+        # add inputs to preprocess task
+        self.task.model.changes = []
+        for variable in self.inputs:
+            self.task.model.changes.append(ModelAttributeChange(
+                target=variable.target,
+                target_namespaces=variable.target_namespaces,
+            ))
 
         # pre-process
         self.sed_task_config = Config(LOG=False)
-        self.preprocessed_task = self.preprocess()
+        self.preprocessed_task = self.preprocess_sed_task(
+            self.task,
+            self.outputs,
+            config=self.sed_task_config,
+        )
 
         # port assignments from parameters
         default_input_port = self.parameters['default_input_port_name']
@@ -245,29 +242,16 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
-    def preprocess(self):
-        preprocessed_task = self.preprocess_sed_task(
-            self.task,
-            self.sed_outputs,
-            config=self.sed_task_config,
-        )
-        return preprocessed_task
-
     def run_task(self, inputs, interval, initial_time=0.):
 
         # update model based on input
-        self.task.changes = []
+        self.task.model.changes = []
         for variable_id, variable_value in inputs.items():
-            self.task.changes.append(ModelAttributeChange(
+            self.task.model.changes.append(ModelAttributeChange(
                 target=self.input_id_target_map[variable_id],
                 new_value=variable_value,
                 target_namespaces=self.input_id_target_namespace[variable_id],
             ))
-
-        # TODO -- optional reprocess?
-        # self.preprocessed_task = self.preprocess()
-        if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
-            import ipdb; ipdb.set_trace()
 
         # set the simulation time
         self.task.simulation.initial_time = initial_time
@@ -281,6 +265,10 @@ class BiosimulatorProcess(Process):
             preprocessed_task=self.preprocessed_task,
             config=self.sed_task_config,
         )
+
+        # if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
+        #     import ipdb; ipdb.set_trace()
+
         return raw_results
 
     def process_result(self, result, time_course_index=-1):
