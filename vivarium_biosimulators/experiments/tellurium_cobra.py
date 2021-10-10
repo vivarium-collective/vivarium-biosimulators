@@ -7,7 +7,6 @@ from vivarium.core.composition import simulate_composite
 from vivarium.core.engine import pf
 from vivarium.plots.simulation_output import plot_simulation_output, plot_variables
 from vivarium_biosimulators.composites.ode_fba import ODE_FBA
-from vivarium_biosimulators.library.mappings import tellurium_mapping
 from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_iAF1260b_PATH
 
 
@@ -16,7 +15,7 @@ SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
     # 'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_upper_bound',  # use flux of target?
-    'dynamics_species_GLCp': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of target?
+    'GLCp': 'R_EX_glc__D_e_lower_bound',  # use flux of target?
     # 'dynamics_species_GLCx': 'value_parameter_R_EX_glc__D_e_lower_bound',  # use flux of source?
 }
 
@@ -27,9 +26,6 @@ def test_tellurium_cobrapy(
 ):
     import warnings;
     warnings.filterwarnings('ignore')
-
-    # get mapping between inputs (initial variables ids) and output variables in tellurium
-    tellurium_input_output_map = tellurium_mapping(SBML_MODEL_PATH)
 
     # ode_fba configuration
     config = {
@@ -51,17 +47,17 @@ def test_tellurium_cobrapy(
                 'kisao_id': 'KISAO_0000437',
             }
         },
-        'ode_input_to_output_map': tellurium_input_output_map,
         'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
+        # 'bounds_unit': 'mmol/g/hr',
         'default_store_name': 'state',
     }
     ode_fba_composer = ODE_FBA(config)
 
     # get initial state from composer
     initial_state = ode_fba_composer.initial_state()
-    initial_state['bounds']['value_parameter_R_EX_glc__D_e_lower_bound'] = -2.0
+    initial_state['bounds']['R_EX_glc__D_e_lower_bound'] = -2.0
 
     # generate the composite
     ode_fba_composite = ode_fba_composer.generate()
@@ -69,11 +65,9 @@ def test_tellurium_cobrapy(
     if verbose:
         print('\nINITIAL STATES:')
         for var_id, val in initial_state['state'].items():
-            if 'flux_reaction_' not in var_id:
-                print(f"{var_id}: {val}")
+            print(f"{var_id}: {val}")
         print('\nINITIAL FLUXES:')
         for var_id, val in initial_state['fluxes'].items():
-            # if 'flux_reaction_' not in var_id:
             print(f"{var_id}: {val}")
         print('\nODE_FBA TOPOLOGY:')
         print(pf(ode_fba_composite['topology']))
@@ -116,10 +110,10 @@ def main():
     plot_variables(
         output,
         variables=[
-            ('fluxes', 'dynamics_species_GLCp'),
-            ('bounds', 'value_parameter_R_EX_glc__D_e_lower_bound'),
-            ('state', 'flux_reaction_R_EX_glc__D_e'),
-            ('state', 'dynamics_species_GLCx'),
+            ('fluxes', 'GLCp'),
+            ('bounds', 'R_EX_glc__D_e_lower_bound'),
+            ('state', 'R_EX_glc__D_e'),
+            ('state', 'GLCx'),
         ],
         out_dir='out/tellurium_cobrapy',
         filename='tellurium_cobrapy_vars',

@@ -110,31 +110,53 @@ class BiosimulatorProcess(Process):
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
+            native_data_types=True,
+            native_ids=True,
         )
 
         # make an map of input ids to targets
         self.input_id_target_map = {}
+        self.input_id_target_namespace = {}
         for variable in self.inputs:
-            self.input_id_target_map[variable.id] = variable.target
+            var = variable.id
+            if '_lower_bound' in var:
+                var2 = var.replace('_lower_bound', '')
+                self.input_id_target_map[
+                    var] = f"/sbml:sbml/sbml:model/sbml:listOfReactions/sbml:reaction[@id='{var2}']/@fbc:lowerFluxBound"
+            elif '_upper_bound' in var:
+                var2 = var.replace('_upper_bound', '')
+                self.input_id_target_map[
+                    var] = f"/sbml:sbml/sbml:model/sbml:listOfReactions/sbml:reaction[@id='{var2}']/@fbc:upperFluxBound"
+            else:
+                self.input_id_target_map[variable.id] = variable.target
+            self.input_id_target_namespace[variable.id] = variable.target_namespaces
 
+        # TODO (ERAN) -- why do we need nonnative_outputs for preprocess_sed_task in tellurium?
         # assign outputs to task
-        for variable in self.outputs:
+        _, _, nonnative_outputs, _ = get_parameters_variables_outputs_for_simulation(
+            model_filename=model.source,
+            model_language=model.language,
+            simulation_type=simulation.__class__,
+            algorithm_kisao_id=simulation.algorithm.kisao_id,
+        )
+        for variable in nonnative_outputs:
             variable.task = self.task
 
         # pre-process
         self.sed_task_config = Config(LOG=False)
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
-            self.outputs,
+            nonnative_outputs,
             config=self.sed_task_config,
         )
 
         # port assignments from parameters
+        default_input_port = self.parameters['default_input_port_name']
         self.port_assignments = {}
         self.input_ports, input_assignments = self.get_port_assignment(
             self.parameters['input_ports'],
             self.inputs,
-            self.parameters['default_input_port_name'],
+            default_input_port,
         )
         self.port_assignments.update(input_assignments)
         self.output_ports, output_assignments = self.get_port_assignment(
@@ -181,21 +203,19 @@ class BiosimulatorProcess(Process):
         """
         extract initial state according to port_assignments
         """
-        initial_state = {
-            'global': {'time': 0.0}
-        }
-        # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
+
+        # get input values
         input_values = {
-            input_state.id: float(input_state.new_value)
+            input_state.id: input_state.new_value
             for input_state in self.inputs}
 
-        # run task to view initial values
-        # TODO (ERAN) -- can we get the initial output values without running a task?
+        # get output_values
         results = self.run_task(
-            input_values, 0, self.parameters['time_step'])
+            input_values, self.parameters['time_step'])
         output_values = self.process_results(
             results, time_course_index=0)
 
+        initial_state = {}
         for port_id, variables in self.port_assignments.items():
             if port_id in self.input_ports:
                 initial_state[port_id] = {
@@ -216,10 +236,7 @@ class BiosimulatorProcess(Process):
 
     def ports_schema(self):
         """ make port schema for all ports and variables in self.port_assignments """
-        schema = {
-            'global': {
-                'time': {'_default': 0.}}
-        }
+        schema = {}
         for port_id, variables in self.port_assignments.items():
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
@@ -231,7 +248,7 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
-    def run_task(self, inputs, initial_time, interval):
+    def run_task(self, inputs, interval, initial_time=0.):
 
         # update model based on input
         self.task.changes = []
@@ -239,6 +256,7 @@ class BiosimulatorProcess(Process):
             self.task.changes.append(ModelAttributeChange(
                 target=self.input_id_target_map[variable_id],
                 new_value=variable_value,
+                target_namespaces=self.input_id_target_namespace[variable_id],
             ))
 
         # set the simulation time
@@ -275,11 +293,8 @@ class BiosimulatorProcess(Process):
         for port_id in self.input_ports:
             input_values.update(state[port_id])
 
-        # set the simulation time
-        global_time = state['global']['time']
-
         # run task
-        raw_results = self.run_task(input_values, global_time, interval)
+        raw_results = self.run_task(input_values, interval)
 
         # transform results
         update = {}
