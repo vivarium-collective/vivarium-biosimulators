@@ -110,8 +110,8 @@ class BiosimulatorProcess(Process):
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
-            native_data_types=True,
-            native_ids=True,
+            # native_data_types=True,
+            # native_ids=True,
         )
 
         # make an map of input ids to targets
@@ -134,22 +134,17 @@ class BiosimulatorProcess(Process):
 
         # TODO (ERAN) -- why do we need nonnative_outputs for preprocess_sed_task in tellurium?
         # assign outputs to task
-        _, _, nonnative_outputs, _ = get_parameters_variables_outputs_for_simulation(
+        _, _, self.nonnative_outputs, _ = get_parameters_variables_outputs_for_simulation(
             model_filename=model.source,
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
         )
-        for variable in nonnative_outputs:
+        for variable in self.nonnative_outputs:
             variable.task = self.task
-
         # pre-process
         self.sed_task_config = Config(LOG=False)
-        self.preprocessed_task = self.preprocess_sed_task(
-            self.task,
-            nonnative_outputs,
-            config=self.sed_task_config,
-        )
+        self.preprocessed_task = self.preprocess()
 
         # port assignments from parameters
         default_input_port = self.parameters['default_input_port_name']
@@ -249,6 +244,14 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
+    def preprocess(self):
+        preprocessed_task = self.preprocess_sed_task(
+            self.task,
+            self.nonnative_outputs,
+            config=self.sed_task_config,
+        )
+        return preprocessed_task
+
     def run_task(self, inputs, interval, initial_time=0.):
 
         # update model based on input
@@ -267,6 +270,9 @@ class BiosimulatorProcess(Process):
         self.task.simulation.initial_time = initial_time
         self.task.simulation.output_start_time = initial_time
         self.task.simulation.output_end_time = initial_time + interval
+
+        # pre-process
+        self.preprocessed_task = self.preprocess()
 
         # execute step
         raw_results, log = self.exec_sed_task(

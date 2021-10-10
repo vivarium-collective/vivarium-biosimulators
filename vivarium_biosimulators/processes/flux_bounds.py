@@ -76,11 +76,12 @@ class FluxBoundsConverter(Process):
         add them to the bounds port, and return the full update.
         """
         update = self.ode_process.next_update(interval, states)
-        bounds = self.convert_fluxes(update['fluxes'], interval)
-        update['bounds'] = {
-            flux_id: {
-                '_value': bound,
-                '_updater': 'set',
-            } for flux_id, bound in bounds.items()
-        }
+        if update.get('fluxes'):
+            bounds = self.convert_fluxes(update['fluxes'], interval)
+            update['bounds'] = {
+                flux_id: {
+                    '_value': bound,
+                    '_updater': 'set',
+                } for flux_id, bound in bounds.items()
+            }
         return update

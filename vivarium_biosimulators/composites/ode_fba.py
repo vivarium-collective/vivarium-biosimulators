@@ -92,7 +92,7 @@ class ODE_FBA(Composer):
             'ode': {
                 'fluxes': ('fluxes',),
                 'bounds': ('bounds',),
-                'inputs': (self.default_store,),  # ode_input_topology,
+                'inputs': (self.default_store,),
                 'outputs': (self.default_store,),
             },
             'fba': {
