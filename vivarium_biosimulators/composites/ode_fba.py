@@ -11,7 +11,7 @@ model's flux bound inputs.
 from vivarium.core.composer import Composer
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium_biosimulators.library.mappings import remove_multi_update
-from vivarium_biosimulators.processes.flux_bounds import FluxBoundsConverter
+from vivarium_biosimulators.processes.flux_bounds import FluxBoundsConverter, get_flux_and_bound_ids
 
 
 class ODE_FBA(Composer):
@@ -43,8 +43,7 @@ class ODE_FBA(Composer):
     def __init__(self, config=None):
         super().__init__(config)
         self.flux_to_bound_map = self.config['flux_to_bound_map']
-        self.flux_ids = [rxn_id for rxn_id in self.flux_to_bound_map.keys()]
-        self.bounds_ids = [rxn_id for rxn_id in self.flux_to_bound_map.values()]
+        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bound_map)
         self.default_store = self.config['default_store_name']
 
     def initial_state(self, config=None):

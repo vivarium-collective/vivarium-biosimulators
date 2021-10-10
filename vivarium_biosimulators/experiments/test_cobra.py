@@ -9,6 +9,7 @@ import os
 from vivarium.processes.clock import Clock
 from vivarium.core.engine import Engine, pf
 from vivarium.core.composer import Composite
+from vivarium.library.dict_utils import deep_merge
 from vivarium.plots.simulation_output import plot_simulation_output
 from vivarium.core.control import run_library_cli
 
@@ -21,6 +22,7 @@ from vivarium_biosimulators.models.model_paths import BIGG_iAF1260b_PATH, BIGG_E
 def test_cobra_process(
     total_time=2.,
     model_source=BIGG_iAF1260b_PATH,
+    change_state={},
 ):
     import warnings;
     warnings.filterwarnings('ignore')
@@ -60,6 +62,7 @@ def test_cobra_process(
     # get initial state from composite
     initial_state = composite.initial_state()
     initial_state = remove_multi_update(initial_state)
+    initial_state = deep_merge(initial_state, change_state)
 
     # make an experiment
     experiment = Engine(
@@ -75,9 +78,10 @@ def test_cobra_process(
     return output
 
 
-def main(model_source=BIGG_iAF1260b_PATH):
+def main(model_source=BIGG_iAF1260b_PATH, **kwargs):
     output = test_cobra_process(
-        model_source=model_source)
+        model_source=model_source,
+        **kwargs)
     settings = {'max_rows': 25}
     basename = os.path.basename(model_source)
     model_name = basename.replace('.xml', '')
@@ -90,7 +94,12 @@ def main(model_source=BIGG_iAF1260b_PATH):
 
 
 def run_ecoli_core():
-    main(model_source=BIGG_ECOLI_CORE_PATH)
+    main(
+        model_source=BIGG_ECOLI_CORE_PATH,
+        change_state={
+            'state': {'R_EX_glc__D_e_lower_bound': -5.5}
+        }
+    )
 
 
 exp_library = {

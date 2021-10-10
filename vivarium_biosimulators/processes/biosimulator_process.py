@@ -266,8 +266,8 @@ class BiosimulatorProcess(Process):
 
         # TODO -- optional reprocess?
         # self.preprocessed_task = self.preprocess()
-        # if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
-        #     import ipdb; ipdb.set_trace()
+        if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
+            import ipdb; ipdb.set_trace()
 
         # set the simulation time
         self.task.simulation.initial_time = initial_time

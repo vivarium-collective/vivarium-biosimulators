@@ -14,9 +14,7 @@ BIGG_MODEL_PATH = BIGG_ECOLI_CORE_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
-    # 'GLCp': 'R_EX_glc__D_e_upper_bound',  # use flux of target?
-    'GLCp': 'R_EX_glc__D_e_lower_bound',  # use flux of target?
-    # 'GLCx': 'R_EX_glc__D_e_lower_bound',  # use flux of source?
+    'GLCp': 'R_EX_glc__D_e_lower_bound',
 }
 
 

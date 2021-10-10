@@ -7,6 +7,22 @@ from vivarium.core.process import Process
 from vivarium.library.units import units
 
 
+def get_flux_and_bound_ids(flux_to_bound_map):
+    """
+    Args: flux_to_bound_map: dictionary with {flux: bounds}
+    Returns: flux_ids, bounds_ids
+    """
+    flux_ids = []
+    bounds_ids = []
+    for flux_id, bounds_id in flux_to_bound_map.items():
+        flux_ids.append(flux_id)
+        if isinstance(bounds_id, dict):
+            pass
+        else:
+            bounds_ids.append(bounds_id)
+    return flux_ids, bounds_ids
+
+
 class FluxBoundsConverter(Process):
     """A wrapper for an ODE process
 
@@ -62,12 +78,15 @@ class FluxBoundsConverter(Process):
         """
         Divide by the time step to get flux bounds, and convert to bounds unit
         """
-        flux_bounds = {
-            self.flux_to_bound_map[flux_id]: (
-                flux_value / dt * (self.flux_unit / self.time_unit)
-            ).to(self.bounds_unit).magnitude
-            for flux_id, flux_value in fluxes.items()
-        }
+        flux_bounds = {}
+        for flux_id, flux_value in fluxes.items():
+            bounds_id = self.flux_to_bound_map[flux_id]
+            if isinstance(bounds_id, dict):
+                Exception('no upper/lower bounds dict yet')
+            else:
+                flux_bounds[bounds_id] = (
+                        flux_value / dt * (self.flux_unit / self.time_unit)
+                ).to(self.bounds_unit).magnitude
         return flux_bounds
 
     def next_update(self, interval, states):
