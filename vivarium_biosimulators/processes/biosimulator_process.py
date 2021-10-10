@@ -23,7 +23,6 @@ from biosimulators_utils.sedml.data_model import (
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
 
-
 TIME_COURSE_SIMULATIONS = ['uniform_time_course', 'analysis']
 
 
@@ -37,10 +36,14 @@ def get_port_assignment(
         ports_dict,
         variables,
         default_port_name,
+        target_to_id={},
 ):
     port_assignments = {}
     port_names = []
-    all_variables = [input_state.id for input_state in variables]
+    all_variables = [
+        target_to_id.get(var.target, var.id)
+        for var in variables
+    ]
     remaining_variables = copy.deepcopy(all_variables)
     if ports_dict:
         for port_id, variables in ports_dict.items():
@@ -138,29 +141,70 @@ class BiosimulatorProcess(Process):
             algorithm_kisao_id=simulation.algorithm.kisao_id,
             native_data_types=True,
             native_ids=True,
-            # change_level=Task,
+            change_level=Task,
             # model_language_options={
             #     ModelLanguage.SBML: {
-            #         'include_reaction_fluxes_in_kinetic_simulation_variables': False,  # record predicted fluxes
-            #     }
-            # }
+            #         'include_reaction_fluxes_in_kinetic_simulation_variables': False,
+            #     }}
         )
 
         # TODO (ERAN) -- go through inputs and outputs, assign ids, use targets for meaning
-        self.outputs[0].id = 'time'
+        if not self.outputs[0].id:
+            self.outputs[0].id = 'time'
 
-        # make an map of input ids to targets
-        self.input_id_target_map = {}
-        self.input_id_target_namespace = {}
+        ###################################
+        # Prepare model attribute changes #
+        ###################################
+
+        # find unique and repeat input ids
+        repeat_ids = []
+        unique_ids = []
         for variable in self.inputs:
-            self.input_id_target_map[variable.id] = variable.target
-            self.input_id_target_namespace[variable.id] = variable.target_namespaces
+            variable_id = variable.id
+            if variable_id in repeat_ids:
+                continue
+            elif variable_id in unique_ids:
+                unique_ids.remove(variable_id)
+                repeat_ids.append(variable_id)
+            else:
+                unique_ids.append(variable_id)
 
-        # add outputs to task
+        # get suggested input names for repeat ids
+        suggested_inputs, _, _, _ = get_parameters_variables_outputs_for_simulation(
+            model_filename=model.source,
+            model_language=model.language,
+            simulation_type=simulation.__class__,
+            algorithm_kisao_id=simulation.algorithm.kisao_id,
+            change_level=Task,
+        )
+        target_to_suggested_input_ids = {
+            i.target: i.id for i in suggested_inputs}
+
+        # make the map of input ids to targets
+        self.input_target_map = {}
+        self.input_target_namespace = {}
+        self.input_initial_value = {}
+        target_to_input_id = {}
+        for variable in self.inputs:
+            variable_id = variable.id
+            target = variable.target
+            if variable_id in repeat_ids:
+                # if repeat, then use suggested id
+                variable_id = target_to_suggested_input_ids[target]
+            target_to_input_id[target] = variable_id
+            self.input_target_map[variable_id] = target
+            self.input_target_namespace[variable_id] = variable.target_namespaces
+            self.input_initial_value[variable_id] = variable.new_value
+
+        ##################
+        # Pre-processing #
+        ##################
+
+        # map outputs to task
         for variable in self.outputs:
             variable.task = self.task
 
-        # add inputs to preprocess task
+        # map inputs for pre-processing
         self.task.model.changes = []
         for variable in self.inputs:
             self.task.model.changes.append(ModelAttributeChange(
@@ -176,6 +220,10 @@ class BiosimulatorProcess(Process):
             config=self.sed_task_config,
         )
 
+        ####################
+        # Port Assignments #
+        ####################
+
         # port assignments from parameters
         default_input_port = self.parameters['default_input_port_name']
         self.port_assignments = {}
@@ -183,6 +231,7 @@ class BiosimulatorProcess(Process):
             self.parameters['input_ports'],
             self.inputs,
             default_input_port,
+            target_to_input_id,
         )
         self.port_assignments.update(input_assignments)
         self.output_ports, output_assignments = get_port_assignment(
@@ -205,9 +254,7 @@ class BiosimulatorProcess(Process):
         """
 
         # get input values
-        input_values = {
-            input_state.id: input_state.new_value
-            for input_state in self.inputs}
+        input_values = self.input_initial_value
 
         # get output_values
         results = self.run_task(
@@ -254,9 +301,9 @@ class BiosimulatorProcess(Process):
         self.task.model.changes = []
         for variable_id, variable_value in inputs.items():
             self.task.model.changes.append(ModelAttributeChange(
-                target=self.input_id_target_map[variable_id],
+                target=self.input_target_map[variable_id],
                 new_value=variable_value,
-                target_namespaces=self.input_id_target_namespace[variable_id],
+                target_namespaces=self.input_target_namespace[variable_id],
             ))
 
         # set the simulation time
@@ -271,9 +318,6 @@ class BiosimulatorProcess(Process):
             preprocessed_task=self.preprocessed_task,
             config=self.sed_task_config,
         )
-
-        # if self.parameters['biosimulator_api'] == 'biosimulators_cobrapy':
-        #     import ipdb; ipdb.set_trace()
 
         return raw_results
 
