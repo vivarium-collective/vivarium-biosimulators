@@ -30,6 +30,7 @@ setup(
         'vivarium-core>=0.3.4',
         'biosimulators-utils>=0.1.119',
         'biosimulators-tellurium==0.1.20',
+        'biosimulators-cobrapy',
     ],
     tests_require=[
         'pytest',
