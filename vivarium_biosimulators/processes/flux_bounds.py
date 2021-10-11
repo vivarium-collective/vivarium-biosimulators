@@ -17,7 +17,8 @@ def get_flux_and_bound_ids(flux_to_bound_map):
     for flux_id, bounds_id in flux_to_bound_map.items():
         flux_ids.append(flux_id)
         if isinstance(bounds_id, dict):
-            pass
+            bounds_ids.append(bounds_id['upper_bound'])
+            bounds_ids.append(bounds_id['lower_bound'])
         else:
             bounds_ids.append(bounds_id)
     return flux_ids, bounds_ids
@@ -35,6 +36,7 @@ class FluxBoundsConverter(Process):
         'ode_process': None,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
+        'default_tolerance': (0.95, 1.05),
         'time_unit': 's',
     }
 
@@ -46,6 +48,7 @@ class FluxBoundsConverter(Process):
         self.outputs = self.ode_process.outputs
         self.input_ports = self.ode_process.input_ports
         self.output_ports = self.ode_process.output_ports
+        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bound_map)
 
         # unit conversion
         self.flux_unit = units(self.parameters['flux_unit'])
@@ -68,9 +71,10 @@ class FluxBoundsConverter(Process):
         Use the ODE process's ports, with an added 'bounds' port for flux bounds output.
         """
         ports = self.ode_process.get_schema()
+        assert set(ports['fluxes']) <= set(self.flux_ids), 'all ode fluxes must be in flux_to_bound_map'
         ports['bounds'] = {
-            self.flux_to_bound_map[rxn_id]: {}
-            for rxn_id in ports['fluxes'].keys()
+            rxn_id: {}
+            for rxn_id in self.bounds_ids
         }
         return ports
 
@@ -80,13 +84,21 @@ class FluxBoundsConverter(Process):
         """
         flux_bounds = {}
         for flux_id, flux_value in fluxes.items():
-            bounds_id = self.flux_to_bound_map[flux_id]
-            if isinstance(bounds_id, dict):
-                Exception('no upper/lower bounds dict yet')
+            flux = (
+                flux_value / dt * (self.flux_unit / self.time_unit)
+            ).to(self.bounds_unit).magnitude
+
+            bounds = self.flux_to_bound_map[flux_id]
+            if isinstance(bounds, dict):
+                upper_bound_id = bounds['upper_bound']
+                lower_bound_id = bounds['lower_bound']
+                tolerance = bounds.get('tolerance', self.parameters['default_tolerance'])
+                bound_values = (flux * tolerance[0], flux * tolerance[1])
+                flux_bounds[upper_bound_id] = max(bound_values)
+                flux_bounds[lower_bound_id] = min(bound_values)
             else:
-                flux_bounds[bounds_id] = (
-                        flux_value / dt * (self.flux_unit / self.time_unit)
-                ).to(self.bounds_unit).magnitude
+                flux_bounds[bounds] = flux
+
         return flux_bounds
 
     def next_update(self, interval, states):

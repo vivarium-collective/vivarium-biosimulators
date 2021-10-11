@@ -14,7 +14,12 @@ BIGG_MODEL_PATH = BIGG_ECOLI_CORE_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
-    'GLCp': 'upper_bound_reaction_R_EX_glc__D_e',
+    # 'GLCp': 'lower_bound_reaction_R_EX_glc__D_e',
+    'GLCx': {
+        'upper_bound': 'upper_bound_reaction_R_EX_glc__D_e',
+        'lower_bound': 'lower_bound_reaction_R_EX_glc__D_e',
+        'tolerance': (0.1, 1.0),
+    }
 }
 
 
@@ -73,7 +78,7 @@ def test_tellurium_cobrapy(
         print(pf(ode_fba_composite['topology']))
         # print the ode outputs and fba inputs to see what is available
         ode_outputs = [var.id for var in ode_fba_composite['processes']['ode'].outputs]
-        fba_inputs = [var.id for var in ode_fba_composite['processes']['fba'].inputs]
+        fba_inputs = [var for var in ode_fba_composite['processes']['fba'].input_target_map.keys()]
         print('\nODE OUTPUTS:')
         print(pf(ode_outputs))
         print('\nFBA INPUTS:')
