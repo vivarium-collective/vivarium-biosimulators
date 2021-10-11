@@ -14,7 +14,7 @@ BIGG_MODEL_PATH = BIGG_ECOLI_CORE_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
-    'GLCp': 'R_EX_glc__D_e_lower_bound',
+    'GLCp': 'upper_bound_reaction_R_EX_glc__D_e',
 }
 
 
@@ -93,7 +93,7 @@ def main():
     output = test_tellurium_cobrapy(
         total_time=3.,
         time_step=0.1,
-        verbose=False,
+        verbose=True,
     )
 
     # plot non-static output
