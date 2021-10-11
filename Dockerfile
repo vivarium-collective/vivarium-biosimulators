@@ -12,7 +12,6 @@ RUN pip install Biosimulators_test_suite
 ## vivarium-biosimulators requirements
 RUN pip install -r requirements.txt
 RUN pip install -r update_requirements.txt --upgrade
-RUN pip install numpy --upgrade
 
 # start mock up server for output
 # RUN pipenv run xvfb-startup.sh
