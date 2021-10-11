@@ -18,11 +18,10 @@ from vivarium.core.process import Process
 
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
-    Task, Algorithm, Model, ModelAttributeChange, 
+    Task, Algorithm, Model, ModelAttributeChange, ModelLanguage,
     UniformTimeCourseSimulation, SteadyStateSimulation
 )
 from biosimulators_utils.sedml.model_utils import get_parameters_variables_outputs_for_simulation
-
 
 TIME_COURSE_SIMULATIONS = ['uniform_time_course', 'analysis']
 
@@ -31,6 +30,36 @@ def get_delta(before, after):
     # TODO -- make this work for BioNetGen, MCell.
     # TODO -- different method for different data types
     return after - before
+
+
+def get_port_assignment(
+        ports_dict,
+        variables,
+        default_port_name,
+        target_to_id={},
+):
+    port_assignments = {}
+    port_names = []
+    all_variables = [
+        target_to_id.get(var.target, var.id)
+        for var in variables
+    ]
+    remaining_variables = copy.deepcopy(all_variables)
+    if ports_dict:
+        for port_id, variables in ports_dict.items():
+            if isinstance(variables, str):
+                variables = [variables]
+            for variable_id in variables:
+                assert variable_id in all_variables, \
+                    f"'{variable_id}' is not in the available in variable ids: {all_variables} "
+                remaining_variables.remove(variable_id)
+            port_assignments[port_id] = variables
+            port_names.append(port_id)
+
+    if remaining_variables:
+        port_assignments[default_port_name] = remaining_variables
+        port_names.append(default_port_name)
+    return port_names, port_assignments
 
 
 class BiosimulatorProcess(Process):
@@ -110,16 +139,78 @@ class BiosimulatorProcess(Process):
             model_language=model.language,
             simulation_type=simulation.__class__,
             algorithm_kisao_id=simulation.algorithm.kisao_id,
+            native_data_types=True,
+            native_ids=True,
+            change_level=Task,
+            # model_language_options={
+            #     ModelLanguage.SBML: {
+            #         'include_reaction_fluxes_in_kinetic_simulation_variables': False,
+            #     }}
         )
 
-        # make an map of input ids to targets
-        self.input_id_target_map = {}
-        for variable in self.inputs:
-            self.input_id_target_map[variable.id] = variable.target
+        # TODO (ERAN) -- go through inputs and outputs, assign ids, use targets for meaning
+        if not self.outputs[0].id:
+            self.outputs[0].id = 'time'
 
-        # assign outputs to task
+        ###################################
+        # Prepare model attribute changes #
+        ###################################
+
+        # find unique and repeat input ids
+        repeat_ids = []
+        unique_ids = []
+        for variable in self.inputs:
+            variable_id = variable.id
+            if variable_id in repeat_ids:
+                continue
+            elif variable_id in unique_ids:
+                unique_ids.remove(variable_id)
+                repeat_ids.append(variable_id)
+            else:
+                unique_ids.append(variable_id)
+
+        # get suggested input names for repeat ids
+        suggested_inputs, _, _, _ = get_parameters_variables_outputs_for_simulation(
+            model_filename=model.source,
+            model_language=model.language,
+            simulation_type=simulation.__class__,
+            algorithm_kisao_id=simulation.algorithm.kisao_id,
+            change_level=Task,
+        )
+        target_to_suggested_input_ids = {
+            i.target: i.id for i in suggested_inputs}
+
+        # make the map of input ids to targets
+        self.input_target_map = {}
+        self.input_target_namespace = {}
+        self.input_initial_value = {}
+        target_to_input_id = {}
+        for variable in self.inputs:
+            variable_id = variable.id
+            target = variable.target
+            if variable_id in repeat_ids:
+                # if repeat, then use suggested id
+                variable_id = target_to_suggested_input_ids[target]
+            target_to_input_id[target] = variable_id
+            self.input_target_map[variable_id] = target
+            self.input_target_namespace[variable_id] = variable.target_namespaces
+            self.input_initial_value[variable_id] = variable.new_value
+
+        ##################
+        # Pre-processing #
+        ##################
+
+        # map outputs to task
         for variable in self.outputs:
             variable.task = self.task
+
+        # map inputs for pre-processing
+        self.task.model.changes = []
+        for variable in self.inputs:
+            self.task.model.changes.append(ModelAttributeChange(
+                target=variable.target,
+                target_namespaces=variable.target_namespaces,
+            ))
 
         # pre-process
         self.sed_task_config = Config(LOG=False)
@@ -129,15 +220,21 @@ class BiosimulatorProcess(Process):
             config=self.sed_task_config,
         )
 
+        ####################
+        # Port Assignments #
+        ####################
+
         # port assignments from parameters
+        default_input_port = self.parameters['default_input_port_name']
         self.port_assignments = {}
-        self.input_ports, input_assignments = self.get_port_assignment(
+        self.input_ports, input_assignments = get_port_assignment(
             self.parameters['input_ports'],
             self.inputs,
-            self.parameters['default_input_port_name'],
+            default_input_port,
+            target_to_input_id,
         )
         self.port_assignments.update(input_assignments)
-        self.output_ports, output_assignments = self.get_port_assignment(
+        self.output_ports, output_assignments = get_port_assignment(
             self.parameters['output_ports'],
             self.outputs,
             self.parameters['default_output_port_name'],
@@ -148,32 +245,6 @@ class BiosimulatorProcess(Process):
         # it is used to determine variable types in port_schema
         self.saved_initial_state = self.make_initial_state()
 
-    def get_port_assignment(
-            self,
-            ports_dict,
-            variables,
-            default_port_name,
-    ):
-        port_assignments = {}
-        port_names = []
-        all_variables = [input_state.id for input_state in variables]
-        remaining_variables = copy.deepcopy(all_variables)
-        if ports_dict:
-            for port_id, variables in ports_dict.items():
-                if isinstance(variables, str):
-                    variables = [variables]
-                for variable_id in variables:
-                    assert variable_id in all_variables, \
-                        f"'{variable_id}' is not in the available in variable ids: {all_variables} "
-                    remaining_variables.remove(variable_id)
-                port_assignments[port_id] = variables
-                port_names.append(port_id)
-
-        if remaining_variables:
-            port_assignments[default_port_name] = remaining_variables
-            port_names.append(default_port_name)
-        return port_names, port_assignments
-
     def initial_state(self, config=None):
         return self.saved_initial_state
 
@@ -181,21 +252,17 @@ class BiosimulatorProcess(Process):
         """
         extract initial state according to port_assignments
         """
-        initial_state = {
-            'global': {'time': 0.0}
-        }
-        # TODO (ERAN) -- tellurium gets a str here, float() might not always apply
-        input_values = {
-            input_state.id: float(input_state.new_value)
-            for input_state in self.inputs}
 
-        # run task to view initial values
-        # TODO (ERAN) -- can we get the initial output values without running a task?
+        # get input values
+        input_values = self.input_initial_value
+
+        # get output_values
         results = self.run_task(
-            input_values, 0, self.parameters['time_step'])
+            input_values, self.parameters['time_step'])
         output_values = self.process_results(
             results, time_course_index=0)
 
+        initial_state = {}
         for port_id, variables in self.port_assignments.items():
             if port_id in self.input_ports:
                 initial_state[port_id] = {
@@ -216,10 +283,7 @@ class BiosimulatorProcess(Process):
 
     def ports_schema(self):
         """ make port schema for all ports and variables in self.port_assignments """
-        schema = {
-            'global': {
-                'time': {'_default': 0.}}
-        }
+        schema = {}
         for port_id, variables in self.port_assignments.items():
             emit_port = port_id in self.parameters['emit_ports']
             schema[port_id] = {
@@ -231,14 +295,15 @@ class BiosimulatorProcess(Process):
             }
         return schema
 
-    def run_task(self, inputs, initial_time, interval):
+    def run_task(self, inputs, interval, initial_time=0.):
 
         # update model based on input
-        self.task.changes = []
+        self.task.model.changes = []
         for variable_id, variable_value in inputs.items():
-            self.task.changes.append(ModelAttributeChange(
-                target=self.input_id_target_map[variable_id],
+            self.task.model.changes.append(ModelAttributeChange(
+                target=self.input_target_map[variable_id],
                 new_value=variable_value,
+                target_namespaces=self.input_target_namespace[variable_id],
             ))
 
         # set the simulation time
@@ -253,6 +318,7 @@ class BiosimulatorProcess(Process):
             preprocessed_task=self.preprocessed_task,
             config=self.sed_task_config,
         )
+
         return raw_results
 
     def process_result(self, result, time_course_index=-1):
@@ -275,11 +341,8 @@ class BiosimulatorProcess(Process):
         for port_id in self.input_ports:
             input_values.update(state[port_id])
 
-        # set the simulation time
-        global_time = state['global']['time']
-
         # run task
-        raw_results = self.run_task(input_values, global_time, interval)
+        raw_results = self.run_task(input_values, interval)
 
         # transform results
         update = {}

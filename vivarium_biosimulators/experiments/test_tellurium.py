@@ -9,8 +9,8 @@ from biosimulators_utils.sedml.data_model import ModelLanguage
 
 from vivarium.core.engine import Engine, pf
 from vivarium.core.composer import Composite
+from vivarium.core.control import run_library_cli
 from vivarium.plots.simulation_output import plot_simulation_output
-from vivarium_biosimulators.library.mappings import tellurium_mapping
 from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
 from vivarium_biosimulators.library.mappings import remove_multi_update
 from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH
@@ -25,43 +25,28 @@ def test_tellurium_process(
 ):
     import warnings; warnings.filterwarnings('ignore')
 
-    # update ports based on input_output_map
-    input_output_map = tellurium_mapping(SBML_MODEL_PATH)
-    input_variable_names = list(input_output_map.keys())
+    # config
     config = {
         'biosimulator_api': 'biosimulators_tellurium',
         'model_source': SBML_MODEL_PATH,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
-        'input_ports': {
-            'concentrations': input_variable_names,
-        },
-        'emit_ports': ['concentrations', 'outputs'],
+        'emit_ports': ['outputs'],
         'time_step': time_step,
     }
 
     # make the process
     process = BiosimulatorProcess(config)
 
-    # make a composite with a topology
-    # connects initial concentrations to outputs
-    rename_concs = {
-        input: (output,)
-        for input, output in input_output_map.items()
-    }
+    # make a composite with a topology, which connects the inputs and outputs
     composite = Composite({
         'processes': {
-            'tellurium': process
+            'tellurium': process,
         },
         'topology': {
             'tellurium': {
-                'concentrations': {
-                    '_path': ('concentrations',),
-                    **rename_concs
-                },
-                'outputs': ('concentrations',),
+                'outputs': ('state',),
                 'inputs': ('state',),
-                'global': ('global',),
             }
         }
     })
@@ -81,26 +66,39 @@ def test_tellurium_process(
 
     # get the data
     output = experiment.emitter.get_timeseries()
-    # print(pf(output['concentrations']))
     return output
 
 
-def main():
-    total_time = 30
+def run_once(
+    dt=1.,
+    total_time=30.,
+):
     plot_settings = {'max_rows': 10}
+    output = test_tellurium_process(
+        total_time=total_time,
+        time_step=dt)
+    dt_str = str(dt).replace('.', '')
+    plot_simulation_output(
+        output,
+        plot_settings,
+        out_dir='out/tellurium',
+        filename=f'tellurium_dt={dt_str}_ttotal={total_time}.png',
+    )
 
+
+def scan_dt():
+    total_time = 30
     for dt in [1e-1, 1e0, 2e0]:
-        output = test_tellurium_process(
+        run_once(
+            dt=dt,
             total_time=total_time,
-            time_step=dt)
-        dt_str = str(dt).replace('.', ':')
-        plot_simulation_output(
-            output,
-            plot_settings,
-            out_dir='out/tellurium',
-            filename=f'tellurium_dt={dt_str}_ttotal={total_time}')
+        )
 
+exp_library = {
+    '0': run_once,
+    '1': scan_dt,
+}
 
-# run with python vivarium_biosimulators/experiments/test_tellurium.py
+# run with python vivarium_biosimulators/experiments/test_tellurium.py -n [exp_library_id]
 if __name__ == '__main__':
-    main()
+    run_library_cli(exp_library)
