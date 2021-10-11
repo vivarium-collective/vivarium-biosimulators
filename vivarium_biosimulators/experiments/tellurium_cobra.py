@@ -6,6 +6,7 @@ from biosimulators_utils.sedml.data_model import ModelLanguage
 from vivarium.core.composition import simulate_composite
 from vivarium.core.engine import pf
 from vivarium.plots.simulation_output import plot_simulation_output, plot_variables
+from vivarium_biosimulators.processes.flux_bounds import get_flux_and_bound_ids
 from vivarium_biosimulators.composites.ode_fba import ODE_FBA
 from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_ECOLI_CORE_PATH
 
@@ -15,11 +16,16 @@ SBML_MODEL_PATH = MILLARD2016_PATH
 
 FLUX_TO_BOUNDS_MAP = {
     # 'GLCp': 'lower_bound_reaction_R_EX_glc__D_e',
-    'GLCx': {
-        'upper_bound': 'upper_bound_reaction_R_EX_glc__D_e',
-        'lower_bound': 'lower_bound_reaction_R_EX_glc__D_e',
-        'tolerance': (0.1, 1.0),
-    }
+    # 'GLCp': {
+    #     'upper_bound': 'upper_bound_reaction_R_EX_glc__D_e',
+    #     'lower_bound': 'lower_bound_reaction_R_EX_glc__D_e',
+    #     'range': (0.0, 1.2),
+    # },
+    'ACEp': {
+        'upper_bound': 'upper_bound_reaction_R_EX_ac_e',
+        'lower_bound': 'lower_bound_reaction_R_EX_ac_e',
+        'range': (0.8, 1.2),
+    },
 }
 
 
@@ -54,7 +60,7 @@ def test_tellurium_cobrapy(
         },
         'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
-        'bounds_unit': 'mmol/L/s',
+        'bounds_unit': 'mmol/L/hr',
         # 'bounds_unit': 'mmol/g/hr',
         'default_store_name': 'state',
     }
@@ -80,9 +86,9 @@ def test_tellurium_cobrapy(
         ode_outputs = [var.id for var in ode_fba_composite['processes']['ode'].outputs]
         fba_inputs = [var for var in ode_fba_composite['processes']['fba'].input_target_map.keys()]
         print('\nODE OUTPUTS:')
-        print(pf(ode_outputs))
+        print(ode_outputs)
         print('\nFBA INPUTS:')
-        print(pf(fba_inputs))
+        print(fba_inputs)
 
     # run the simulation
     sim_settings = {
@@ -113,8 +119,9 @@ def main():
     )
 
     # plot specific output variables
-    fluxes = [('fluxes', flux) for flux, bound in FLUX_TO_BOUNDS_MAP.items()]
-    bounds = [('bounds', bound) for flux, bound in FLUX_TO_BOUNDS_MAP.items()]
+    flux_ids, bound_ids = get_flux_and_bound_ids(FLUX_TO_BOUNDS_MAP)
+    fluxes = [('fluxes', flux) for flux in flux_ids]
+    bounds = [('bounds', bound) for bound in bound_ids]
     plot_variables(
         output,
         variables=[

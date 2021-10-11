@@ -36,7 +36,7 @@ class FluxBoundsConverter(Process):
         'ode_process': None,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
-        'default_tolerance': (0.95, 1.05),
+        'default_range': (0.95, 1.05),
         'time_unit': 's',
     }
 
@@ -92,10 +92,17 @@ class FluxBoundsConverter(Process):
             if isinstance(bounds, dict):
                 upper_bound_id = bounds['upper_bound']
                 lower_bound_id = bounds['lower_bound']
-                tolerance = bounds.get('tolerance', self.parameters['default_tolerance'])
-                bound_values = (flux * tolerance[0], flux * tolerance[1])
-                flux_bounds[upper_bound_id] = max(bound_values)
-                flux_bounds[lower_bound_id] = min(bound_values)
+                bounds_range = bounds.get('range', self.parameters['default_range'])
+                bound_values = (flux * bounds_range[0], flux * bounds_range[1])
+                max_flux = max(bound_values)
+                min_flux = min(bound_values)
+                if flux <= 0:
+                    flux_bounds[upper_bound_id] = 0
+                    flux_bounds[lower_bound_id] = min_flux
+                else:
+                    flux_bounds[upper_bound_id] = max_flux
+                    flux_bounds[lower_bound_id] = 0
+                # print(f'BOUNDS: {bound_values}')
             else:
                 flux_bounds[bounds] = flux
 
