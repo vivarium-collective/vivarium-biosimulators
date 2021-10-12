@@ -27,9 +27,9 @@ setup(
     package_data={},
     include_package_data=True,
     install_requires=[
-        'vivarium-core>=0.3.4',
-        'biosimulators-utils>=0.1.119',
-        'biosimulators-tellurium>=0.1.23',
+        'vivarium-core',
+        'biosimulators-utils',
+        'biosimulators-tellurium',
         'biosimulators-cobrapy',
     ],
     tests_require=[
