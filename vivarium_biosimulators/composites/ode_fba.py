@@ -24,7 +24,8 @@ class ODE_FBA(Composer):
         - fba_config (dict): configuration for the fba biosimulator.
             Must include values for 'biosimulator_api', 'model_source',
             'simulation', and 'model_language'.
-        - flux_to_bound_map (dict):
+        - flux_to_bounds_map (dict): a dictionary that maps the ODE process'
+            reactions to flux bounds inputs to the FBA process.
         - default_store (str): The name of a default store, to use if a
             port mapping is not declared by ode_topology or fba_topology.
         - flux_unit (str): The unit of the ode process' flux output.
@@ -33,7 +34,7 @@ class ODE_FBA(Composer):
     defaults = {
         'ode_config': None,
         'fba_config': None,
-        'flux_to_bound_map': None,
+        'flux_to_bounds_map': None,
         'default_store_name': 'state',
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
@@ -41,8 +42,8 @@ class ODE_FBA(Composer):
 
     def __init__(self, config=None):
         super().__init__(config)
-        self.flux_to_bound_map = self.config['flux_to_bound_map']
-        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bound_map)
+        self.flux_to_bounds_map = self.config['flux_to_bounds_map']
+        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bounds_map)
         self.default_store = self.config['default_store_name']
 
     def initial_state(self, config=None):
@@ -74,7 +75,7 @@ class ODE_FBA(Composer):
         # which adds a bounds port on top of the ode_process
         flux_bounds_config = {
             'ode_process': ode_process,
-            'flux_to_bound_map': self.flux_to_bound_map,
+            'flux_to_bounds_map': self.flux_to_bounds_map,
             'flux_unit': self.config['flux_unit'],
             'bounds_unit': self.config['bounds_unit'],
         }

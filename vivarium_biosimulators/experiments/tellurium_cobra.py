@@ -63,7 +63,7 @@ def test_tellurium_cobrapy(
                 'kisao_id': 'KISAO_0000437',
             },
         },
-        'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
+        'flux_to_bounds_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/g/hr',
         'default_store_name': 'state',

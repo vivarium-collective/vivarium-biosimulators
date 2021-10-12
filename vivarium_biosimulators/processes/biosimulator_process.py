@@ -66,16 +66,18 @@ class BiosimulatorProcess(Process):
     """ A Vivarium wrapper for any BioSimulator
 
     Config:
-        - biosimulator_api (str): the name of the imported biosimulator api
-        - model_source (str): a path to the model file
-        - model_language (str): the model language, select from biosimulators_utils.sedml.data_model.ModelLanguage
-        - simulation (str): select from 'uniform_time_course', 'steady_state', 'one_step', 'analysis'
-        - input_ports (dict): a dictionary mapping {'input_port_name': ['list', 'of', 'variables']}
-        - output_ports (dict): a dictionary mapping {'output_port_name': ['list', 'of', 'variables']}
-        - default_input_port_name (str): the default input port name for variables not specified by input_ports
-        - default_output_port_name (str): the default output port name for variables not specified by output_ports
-        - emit_ports (list): a list of the ports whose values are emitted
-        - time_step (float): the synchronization time step
+        - biosimulator_api (str): the name of the imported biosimulator api.
+        - model_source (str): a path to the model file.
+        - model_language (str): the model language, select from biosimulators_utils.sedml.data_model.ModelLanguage.
+        - simulation (str): select from ['uniform_time_course', 'steady_state', 'one_step', 'analysis'].
+        - input_ports (dict): a dictionary mapping {'input_port_name': ['list', 'of', 'variables']}.
+        - output_ports (dict): a dictionary mapping {'output_port_name': ['list', 'of', 'variables']}.
+        - default_input_port_name (str): the default input port for variables not specified by input_ports.
+        - default_output_port_name (str): the default output port for variables not specified by output_ports.
+        - emit_ports (list): a list of the ports whose values are emitted.
+        - algorithm (dict): the kwargs for biosimulators_utils.sedml.data_model.Algorithm.
+        - sed_task_config (dict): the kwargs for biosimulators_utils.config.Config.
+        - time_step (float): the synchronization time step.
     """
     
     defaults = {

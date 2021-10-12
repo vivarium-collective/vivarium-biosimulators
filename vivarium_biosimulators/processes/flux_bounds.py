@@ -7,9 +7,9 @@ from vivarium.core.process import Process
 from vivarium.library.units import units
 
 
-def get_flux_and_bound_ids(flux_to_bound_map):
+def get_flux_and_bound_ids(flux_to_bounds_map):
     """
-    Args: flux_to_bound_map: dictionary with {flux: bounds}. Bounds can optionally
+    Args: flux_to_bounds_map: dictionary with {flux: bounds}. Bounds can optionally
         be a dictionary with keys 'upper_bound', 'lower_bound', and 'range' to have a
         single reaction map to upper and lower bounds, which set the bounds to a range
         around the given reaction flux.
@@ -17,7 +17,7 @@ def get_flux_and_bound_ids(flux_to_bound_map):
     """
     flux_ids = []
     bounds_ids = []
-    for flux_id, bounds_id in flux_to_bound_map.items():
+    for flux_id, bounds_id in flux_to_bounds_map.items():
         flux_ids.append(flux_id)
         if isinstance(bounds_id, dict):
             bounds_ids.append(bounds_id['upper_bound'])
@@ -32,11 +32,18 @@ class FluxBoundsConverter(Process):
 
     Converts the ODE process's output fluxes to flux bounds inputs for an fba process.
 
-    TODO (ERAN) mass and volume should come from a store so it can be updated
+    Parameters:
+        * ode_process (BiosimulatorProcess): an initialized ODE BiosimulatorProcess.
+        * flux_to_bounds_map (dict): a dictionary that maps the ODE process'
+            reactions to flux bounds inputs to the FBA process.
+        * flux_unit (str): the units for the ODE reactions (default is mol/L).
+        * bounds_unit (str): the units for the FBA bounds (default is mol/L/s).
+    Notes:
+         * mass and volume should come from a store so it can be updated
     """
     defaults = {
-        'flux_to_bound_map': {},
         'ode_process': None,
+        'flux_to_bounds_map': {},
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
         'default_range': (0.95, 1.05),
@@ -47,13 +54,13 @@ class FluxBoundsConverter(Process):
 
     def __init__(self, parameters=None):
         super().__init__(parameters)
-        self.flux_to_bound_map = self.parameters['flux_to_bound_map']
+        self.flux_to_bounds_map = self.parameters['flux_to_bounds_map']
         self.ode_process = self.parameters['ode_process']
         self.inputs = self.ode_process.inputs
         self.outputs = self.ode_process.outputs
         self.input_ports = self.ode_process.input_ports
         self.output_ports = self.ode_process.output_ports
-        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bound_map)
+        self.flux_ids, self.bounds_ids = get_flux_and_bound_ids(self.flux_to_bounds_map)
 
         # unit conversion
         self.flux_unit = units(self.parameters['flux_unit'])
@@ -79,7 +86,7 @@ class FluxBoundsConverter(Process):
         """
         ports = self.ode_process.get_schema()
         assert set(ports['fluxes']) <= set(self.flux_ids), f"{list(set(ports['fluxes']) - set(self.flux_ids))} " \
-                                                           f"ode fluxes are not in flux_to_bound_map"
+                                                           f"ode fluxes are not in flux_to_bounds_map"
         ports['bounds'] = {
             rxn_id: {}
             for rxn_id in self.bounds_ids
@@ -104,7 +111,7 @@ class FluxBoundsConverter(Process):
                         self.flux_unit / self.time_unit)
                 ).to(self.bounds_unit).magnitude
 
-            bounds = self.flux_to_bound_map[flux_id]
+            bounds = self.flux_to_bounds_map[flux_id]
             if isinstance(bounds, dict):
                 upper_bound_id = bounds['upper_bound']
                 lower_bound_id = bounds['lower_bound']
