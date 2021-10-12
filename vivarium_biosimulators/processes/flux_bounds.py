@@ -78,7 +78,8 @@ class FluxBoundsConverter(Process):
         Use the ODE process's ports, with an added 'bounds' port for flux bounds output.
         """
         ports = self.ode_process.get_schema()
-        assert set(ports['fluxes']) <= set(self.flux_ids), 'all ode fluxes must be in flux_to_bound_map'
+        assert set(ports['fluxes']) <= set(self.flux_ids), f"{list(set(ports['fluxes']) - set(self.flux_ids))} " \
+                                                           f"ode fluxes are not in flux_to_bound_map"
         ports['bounds'] = {
             rxn_id: {}
             for rxn_id in self.bounds_ids

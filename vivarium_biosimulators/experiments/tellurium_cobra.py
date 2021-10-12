@@ -109,8 +109,8 @@ def test_tellurium_cobrapy(
 
 def main():
     output = test_tellurium_cobrapy(
-        total_time=3.,
-        time_step=1.,
+        total_time=10.,
+        time_step=0.1,
         verbose=True,
     )
 
