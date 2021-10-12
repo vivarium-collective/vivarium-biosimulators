@@ -37,7 +37,6 @@ class ODE_FBA(Composer):
         'default_store_name': 'state',
         'flux_unit': 'mol/L',
         'bounds_unit': 'mmol/L/s',
-        # 'bounds_unit': 'mmol/g/hr',
     }
 
     def __init__(self, config=None):

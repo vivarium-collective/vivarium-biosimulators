@@ -9,7 +9,10 @@ from vivarium.library.units import units
 
 def get_flux_and_bound_ids(flux_to_bound_map):
     """
-    Args: flux_to_bound_map: dictionary with {flux: bounds}
+    Args: flux_to_bound_map: dictionary with {flux: bounds}. Bounds can optionally
+        be a dictionary with keys 'upper_bound', 'lower_bound', and 'range' to have a
+        single reaction map to upper and lower bounds, which set the bounds to a range
+        around the given reaction flux.
     Returns: flux_ids, bounds_ids
     """
     flux_ids = []
@@ -29,7 +32,7 @@ class FluxBoundsConverter(Process):
 
     Converts the ODE process's output fluxes to flux bounds inputs for an fba process.
 
-    TODO (ERAN) -- adjust both upper and lower bounds?
+    TODO (ERAN) mass and volume should come from a store so it can be updated
     """
     defaults = {
         'flux_to_bound_map': {},
@@ -38,6 +41,8 @@ class FluxBoundsConverter(Process):
         'bounds_unit': 'mmol/L/s',
         'default_range': (0.95, 1.05),
         'time_unit': 's',
+        'mass': (1, 'fg'),
+        'volume': (1, 'fL'),
     }
 
     def __init__(self, parameters=None):
@@ -54,6 +59,8 @@ class FluxBoundsConverter(Process):
         self.flux_unit = units(self.parameters['flux_unit'])
         self.bounds_unit = units(self.parameters['bounds_unit'])
         self.time_unit = units(self.parameters['time_unit'])
+        self.mass = self.parameters['mass'][0] * units(self.parameters['mass'][1])
+        self.volume = self.parameters['volume'][0] * units(self.parameters['volume'][1])
 
     def initial_state(self, config=None):
         state = self.ode_process.initial_state(config)
@@ -84,9 +91,17 @@ class FluxBoundsConverter(Process):
         """
         flux_bounds = {}
         for flux_id, flux_value in fluxes.items():
-            flux = (
-                flux_value / dt * (self.flux_unit / self.time_unit)
-            ).to(self.bounds_unit).magnitude
+            try:
+                flux = (
+                    flux_value / dt * (
+                        self.flux_unit / self.time_unit)
+                ).to(self.bounds_unit).magnitude
+            except:
+                # use mass?
+                flux = (
+                    flux_value * self.volume / self.mass / dt * (
+                        self.flux_unit / self.time_unit)
+                ).to(self.bounds_unit).magnitude
 
             bounds = self.flux_to_bound_map[flux_id]
             if isinstance(bounds, dict):

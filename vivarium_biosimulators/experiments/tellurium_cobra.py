@@ -9,28 +9,33 @@ from vivarium.plots.simulation_output import plot_simulation_output, plot_variab
 from vivarium_biosimulators.processes.flux_bounds import get_flux_and_bound_ids
 from vivarium_biosimulators.composites.ode_fba import ODE_FBA
 from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH, BIGG_ECOLI_CORE_PATH
+from biosimulators_cobrapy.data_model import KISAO_ALGORITHMS_PARAMETERS_MAP
+
+# Turn off errors when solution not optimal
+KISAO_ALGORITHMS_PARAMETERS_MAP['KISAO_0000437']['check_status'] = False
 
 
 BIGG_MODEL_PATH = BIGG_ECOLI_CORE_PATH
 SBML_MODEL_PATH = MILLARD2016_PATH
 
+
 FLUX_TO_BOUNDS_MAP = {
     # 'GLCp': 'lower_bound_reaction_R_EX_glc__D_e',
-    # 'GLCp': {
-    #     'upper_bound': 'upper_bound_reaction_R_EX_glc__D_e',
-    #     'lower_bound': 'lower_bound_reaction_R_EX_glc__D_e',
-    #     'range': (0.0, 1.2),
-    # },
+    'GLCp': {
+        'upper_bound': 'upper_bound_reaction_R_EX_glc__D_e',
+        'lower_bound': 'lower_bound_reaction_R_EX_glc__D_e',
+        'range': (0.9, 1.1),
+    },
     'ACEp': {
         'upper_bound': 'upper_bound_reaction_R_EX_ac_e',
         'lower_bound': 'lower_bound_reaction_R_EX_ac_e',
-        'range': (0.8, 1.2),
+        'range': (0.9, 1.1),
     },
 }
 
 
 def test_tellurium_cobrapy(
-        total_time=2.,
+        total_time=10.,
         time_step=1.,
         verbose=False,
 ):
@@ -60,15 +65,17 @@ def test_tellurium_cobrapy(
         },
         'flux_to_bound_map': FLUX_TO_BOUNDS_MAP,
         'flux_unit': 'mol/L',
-        'bounds_unit': 'mmol/L/hr',
-        # 'bounds_unit': 'mmol/g/hr',
+        'bounds_unit': 'mmol/g/hr',
         'default_store_name': 'state',
     }
     ode_fba_composer = ODE_FBA(config)
 
     # get initial state from composer
     initial_state = ode_fba_composer.initial_state()
-    initial_state['bounds']['R_EX_glc__D_e_lower_bound'] = -2.0
+    initial_state['bounds']['upper_bound_reaction_R_EX_glc__D_e'] = 10.
+    initial_state['bounds']['lower_bound_reaction_R_EX_glc__D_e'] = -10.
+    initial_state['bounds']['upper_bound_reaction_R_EX_ac_e'] = 10.
+    initial_state['bounds']['lower_bound_reaction_R_EX_ac_e'] = -10.
 
     # generate the composite
     ode_fba_composite = ode_fba_composer.generate()
@@ -103,7 +110,7 @@ def test_tellurium_cobrapy(
 def main():
     output = test_tellurium_cobrapy(
         total_time=3.,
-        time_step=0.1,
+        time_step=1.,
         verbose=True,
     )
 

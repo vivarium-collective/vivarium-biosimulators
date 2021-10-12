@@ -91,6 +91,9 @@ class BiosimulatorProcess(Process):
         'algorithm': {
             'kisao_id': 'KISAO_0000019',  # default is CVODE
         },
+        'sed_task_config': {
+            'LOG': False,
+        },
         'time_step': 1.,
     }
 
@@ -213,7 +216,8 @@ class BiosimulatorProcess(Process):
             ))
 
         # pre-process
-        self.sed_task_config = Config(LOG=False)
+        self.sed_task_config = Config(
+            **self.parameters['sed_task_config'])
         self.preprocessed_task = self.preprocess_sed_task(
             self.task,
             self.outputs,
