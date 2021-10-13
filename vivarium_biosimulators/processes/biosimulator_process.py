@@ -79,7 +79,6 @@ class BiosimulatorProcess(Process):
         - sed_task_config (dict): the kwargs for biosimulators_utils.config.Config.
         - time_step (float): the synchronization time step.
     """
-    
     defaults = {
         'biosimulator_api': '',
         'model_source': '',
@@ -292,11 +291,12 @@ class BiosimulatorProcess(Process):
         schema = {}
         for port_id, variables in self.port_assignments.items():
             emit_port = port_id in self.parameters['emit_ports']
+            updater_schema = {'_updater': 'accumulate'} if port_id in self.input_ports else {}
             schema[port_id] = {
                 variable: {
                     '_default': self.saved_initial_state[port_id][variable],
-                    '_updater': 'accumulate',
                     '_emit': emit_port,
+                    **updater_schema,
                 } for variable in variables
             }
         return schema
@@ -360,7 +360,7 @@ class BiosimulatorProcess(Process):
                     raw_result = raw_results[variable_id]
                     value = self.process_result(raw_result)
 
-                    # TODO (ERAN) -- different get_delta for different data types?
+                    # different get_delta for different data types?
                     update[port_id][variable_id] = get_delta(
                         state[port_id][variable_id], value)
         return update
