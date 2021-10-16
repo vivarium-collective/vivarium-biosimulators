@@ -291,7 +291,7 @@ class BiosimulatorProcess(Process):
         schema = {}
         for port_id, variables in self.port_assignments.items():
             emit_port = port_id in self.parameters['emit_ports']
-            updater_schema = {'_updater': 'accumulate'} if port_id in self.input_ports else {}
+            updater_schema = {'_updater': 'accumulate'} if port_id in self.output_ports else {}
             schema[port_id] = {
                 variable: {
                     '_default': self.saved_initial_state[port_id][variable],
