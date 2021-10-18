@@ -1,5 +1,5 @@
 """
-Test BiosimulatorProcess's COBRApy API
+Test Biosimulator's COBRApy API
 ======================================
 
 Execute by running: ``python vivarium_biosimulators/processes/test_cobra.py``
@@ -20,7 +20,7 @@ from vivarium.plots.simulation_output import plot_simulation_output
 from vivarium.core.control import run_library_cli
 
 from biosimulators_utils.sedml.data_model import ModelLanguage
-from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.processes.biosimulator_process import Biosimulator
 from vivarium_biosimulators.library.mappings import remove_multi_update
 from vivarium_biosimulators.models.model_paths import BIGG_iAF1260b_PATH, BIGG_ECOLI_CORE_PATH
 
@@ -50,7 +50,7 @@ def test_cobra_process(
 
     # make the processes
     # timeline adds perturbations to inputs
-    process = BiosimulatorProcess(config)
+    process = Biosimulator(config)
     timeline_process = TimelineProcess({'timeline': timeline})
 
     # make a composite

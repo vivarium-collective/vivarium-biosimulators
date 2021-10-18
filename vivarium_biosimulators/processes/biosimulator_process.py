@@ -3,7 +3,7 @@
 BioSimulator Process
 ====================
 
-``BiosimulatorProcess`` is a general Vivarium :term:`process class` that can load any
+``Biosimulator`` is a general Vivarium :term:`process class` that can load any
 BioSimulator and model, and run it.
 
 References:
@@ -62,7 +62,7 @@ def get_port_assignment(
     return port_names, port_assignments
 
 
-class BiosimulatorProcess(Process):
+class Biosimulator(Process):
     """ A Vivarium wrapper for any BioSimulator
 
     Config:

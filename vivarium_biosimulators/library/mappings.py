@@ -1,6 +1,6 @@
 from biosimulators_utils.sedml.data_model import ModelLanguage
 
-from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.processes.biosimulator_process import Biosimulator
 
 
 def tellurium_mapping(
@@ -16,7 +16,7 @@ def tellurium_mapping(
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'uniform_time_course',
     }
-    process = BiosimulatorProcess(config)
+    process = Biosimulator(config)
     input_output_map = {}
     for variable in process.inputs:
         if variable.target and (

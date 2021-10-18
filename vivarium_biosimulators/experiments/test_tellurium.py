@@ -1,5 +1,5 @@
 """
-Test BiosimulatorProcess's Tellurium API
+Test Biosimulator's Tellurium API
 ========================================
 
 Execute by running: ``python vivarium_biosimulators/processes/test_tellurium.py``
@@ -11,7 +11,7 @@ from vivarium.core.engine import Engine, pf
 from vivarium.core.composer import Composite
 from vivarium.core.control import run_library_cli
 from vivarium.plots.simulation_output import plot_simulation_output
-from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.processes.biosimulator_process import Biosimulator
 from vivarium_biosimulators.library.mappings import remove_multi_update
 from vivarium_biosimulators.models.model_paths import MILLARD2016_PATH
 
@@ -36,7 +36,7 @@ def test_tellurium_process(
     }
 
     # make the process
-    process = BiosimulatorProcess(config)
+    process = Biosimulator(config)
 
     # make a composite with a topology, which connects the inputs and outputs
     composite = Composite({

@@ -9,7 +9,7 @@ model's flux bound inputs.
 """
 
 from vivarium.core.composer import Composer
-from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.processes.biosimulator_process import Biosimulator
 from vivarium_biosimulators.library.mappings import remove_multi_update
 from vivarium_biosimulators.processes.flux_bounds import FluxBoundsConverter, get_flux_and_bound_ids
 
@@ -61,7 +61,7 @@ class ODE_FBA(Composer):
             'emit_ports': ['outputs', 'bounds'],
             **config['fba_config'],
         }
-        fba_process = BiosimulatorProcess(fba_full_config)
+        fba_process = Biosimulator(fba_full_config)
 
         # make the ode process, and fluxes port
         ode_full_config = {
@@ -69,7 +69,7 @@ class ODE_FBA(Composer):
             'emit_ports': ['outputs', 'fluxes'],
             **config['ode_config'],
         }
-        ode_process = BiosimulatorProcess(ode_full_config)
+        ode_process = Biosimulator(ode_full_config)
 
         # make the ode flux bounds converter process,
         # which adds a bounds port on top of the ode_process

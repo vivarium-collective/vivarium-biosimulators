@@ -33,7 +33,7 @@ class FluxBoundsConverter(Process):
     Converts the ODE process's output fluxes to flux bounds inputs for an fba process.
 
     Parameters:
-        * ode_process (BiosimulatorProcess): an initialized ODE BiosimulatorProcess.
+        * ode_process (Biosimulator): an initialized ODE Biosimulator.
         * flux_to_bounds_map (dict): a dictionary that maps the ODE process'
             reactions to flux bounds inputs to the FBA process.
         * flux_unit (str): the units for the ODE reactions (default is mol/L).

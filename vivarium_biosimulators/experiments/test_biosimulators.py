@@ -3,7 +3,7 @@ import numpy as np
 
 from vivarium.core.composition import simulate_process
 from vivarium.core.control import Control
-from vivarium_biosimulators.processes.biosimulator_process import BiosimulatorProcess
+from vivarium_biosimulators.processes.biosimulator_process import Biosimulator
 from biosimulators_utils.sedml.data_model import ModelLanguage
 
 
@@ -85,14 +85,14 @@ def run_biosimulator_process(
         total_time=1.,
         **config,
 ):
-    """Test BiosimulatorProcess with an API and model
+    """Test Biosimulator with an API and model
 
-    Load BiosimulatorProcess with a single Biosimulator API and model, and run it
+    Load Biosimulator with a single Biosimulator API and model, and run it
     """
     import warnings; warnings.filterwarnings('ignore')
 
     # initialize the biosimulator process
-    process = BiosimulatorProcess(config)
+    process = Biosimulator(config)
 
     # make a topology
     topology = {
