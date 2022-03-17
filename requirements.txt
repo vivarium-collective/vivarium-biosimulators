@@ -8,3 +8,4 @@ vivarium-core
 biosimulators-utils
 biosimulators-tellurium
 biosimulators-cobrapy
+biosimulators-copasi

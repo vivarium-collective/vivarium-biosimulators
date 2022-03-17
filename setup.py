@@ -31,6 +31,7 @@ setup(
         'biosimulators-utils',
         'biosimulators-tellurium',
         'biosimulators-cobrapy',
+        'biosimulators-copasi',
     ],
     tests_require=[
         'pytest',

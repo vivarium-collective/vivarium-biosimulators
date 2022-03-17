@@ -7,3 +7,5 @@ simulations.
 BioSimulators home page: https://biosimulators.org \
 BioSimulators GitHub: https://github.com/biosimulators/Biosimulators \
 Vivarium-core GitHub: https://github.com/vivarium-collective/vivarium-core
+
+## Set up
