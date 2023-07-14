@@ -79,17 +79,67 @@ BIOSIMULATOR_SPECS = [
 ]
 
 
+class ProcessController:
+    def __init__(self, process_id: str = None):
+        self.process_id = process_id
+
+    def run_biosimulator_process(
+            self,
+            initial_state=None,
+            input_output_map=None,
+            total_time=1.,
+            **config,
+    ):
+        """Test Biosimulator with an API and model
+
+        Load Biosimulator with a single Biosimulator API and model, and run it
+        """
+        import warnings
+        warnings.filterwarnings('ignore')
+
+        # initialize the biosimulator process
+        process = Biosimulator(config)
+
+        # make a topology
+        topology = {
+            'global_time': ('global_time',),
+            'input': ('state',) if not input_output_map else {
+                **{'_path': ('state',)},
+                **input_output_map,
+            },
+            'output': ('state',)
+        }
+
+        # get initial_state
+        initial_model_state = self.get_initial_model_state(process=process, initial_state=initial_state)
+
+        # run the simulation
+        sim_settings = {
+            'topology': topology,
+            'total_time': total_time,
+            'initial_state': initial_model_state,
+            'display_info': False}
+        output = simulate_process(process, sim_settings)
+
+        return output
+
+    def get_initial_model_state(self, process: Biosimulator, initial_state=None):
+        initial_state = initial_state or {}
+        return process.initial_state() if not initial_state else {'state': initial_state}
+
+
 def run_biosimulator_process(
-        initial_state=None,
-        input_output_map=None,
-        total_time=1.,
-        **config,
+    initial_state=None,
+    input_output_map=None,
+    total_time=1.,
+    **config,
 ):
     """Test Biosimulator with an API and model
 
     Load Biosimulator with a single Biosimulator API and model, and run it
     """
-    import warnings; warnings.filterwarnings('ignore')
+    import warnings
+    warnings.filterwarnings('ignore')
 
     # initialize the biosimulator process
     process = Biosimulator(config)
@@ -105,8 +155,7 @@ def run_biosimulator_process(
     }
 
     # get initial_state
-    initial_state = initial_state or {}
-    initial_model_state = {'state': initial_state} or process.initial_state()
+    initial_model_state = get_initial_model_state(process=process, initial_state=initial_state)
 
     # run the simulation
     sim_settings = {
@@ -119,11 +168,17 @@ def run_biosimulator_process(
     return output
 
 
+def get_initial_model_state(process: Biosimulator, initial_state=None):
+    initial_state = initial_state or {}
+    return process.initial_state() if not initial_state else {'state': initial_state}
+
+
 def test_biosimulators(biosimulator_ids=None):
     """
     Runs run_biosimulator_process with any number of the available Biosimulator APIs
     """
-    import warnings; warnings.filterwarnings('ignore')
+    import warnings
+    warnings.filterwarnings('ignore')
 
     for spec in BIOSIMULATOR_SPECS:
         biosimulator_api = spec['biosimulator_api']
@@ -162,8 +217,8 @@ workflow_library = {
 
 # run methods in workflow_library from the command line with:
 # python vivarium_biosimulators/experiments/test_biosimulators.py -w [workflow id]
-if __name__ == '__main__':
+'''if __name__ == '__main__':
     Control(
         experiments=test_library,
         workflows=workflow_library,
-    )
+    )'''

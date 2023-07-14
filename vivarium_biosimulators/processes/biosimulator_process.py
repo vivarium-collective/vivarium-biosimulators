@@ -13,9 +13,9 @@ References:
 
 import importlib
 import copy
-
+from typing import *
 from vivarium.core.process import Process
-
+from vivarium_biosimulators.library.process_logger import ProcessLogger
 from biosimulators_utils.config import Config
 from biosimulators_utils.sedml.data_model import (
     Task, Algorithm, Model, ModelAttributeChange, ModelLanguage,
@@ -98,9 +98,11 @@ class Biosimulator(Process):
         'time_step': 1.,
     }
 
-    def __init__(self, parameters=None):
+    def __init__(self, parameters: Dict = None):
         super().__init__(parameters)
-
+        # Establish logger
+        logging_dirpath = '/Users/alex/Desktop/vivarium_logs/vivarium_biosimulators_logs'
+        self.logger = ProcessLogger(logging_dirpath, 'vivarium_biosimulators_log.json')
         # import biosimulator module
         biosimulator = importlib.import_module(self.parameters['biosimulator_api'])
         self.exec_sed_task = getattr(biosimulator, 'exec_sed_task')
@@ -250,6 +252,9 @@ class Biosimulator(Process):
         # it is used to determine variable types in port_schema
         self.saved_initial_state = self.make_initial_state()
 
+        log_entry = f'Biosimulator process with parameters: {self.parameters} created.'
+        self.logger.add_entry(log_entry)
+
     def initial_state(self, config=None):
         return self.saved_initial_state
 
@@ -279,6 +284,9 @@ class Biosimulator(Process):
                     variable: output_values[variable]
                     for variable in variables
                 }
+
+        log_entry = f'Initial state with value: {initial_state} created.'
+        self.logger.add_entry(log_entry)
         return initial_state
 
     def is_deriver(self):
@@ -299,10 +307,12 @@ class Biosimulator(Process):
                     **updater_schema,
                 } for variable in variables
             }
+
+        log_entry = f'Port schema with the value: {schema} created.'
+        self.logger.add_entry(log_entry)
         return schema
 
     def run_task(self, inputs, interval, initial_time=0.):
-
         # update model based on input
         self.task.model.changes = []
         for variable_id, variable_value in inputs.items():
@@ -317,15 +327,22 @@ class Biosimulator(Process):
         self.task.simulation.output_start_time = initial_time
         self.task.simulation.output_end_time = initial_time + interval
 
-        # execute step
-        raw_results, log = self.exec_sed_task(
-            self.task,
-            self.outputs,
-            preprocessed_task=self.preprocessed_task,
-            config=self.sed_task_config,
-        )
-
-        return raw_results
+        try:
+            # execute step
+            raw_results, log = self.exec_sed_task(
+                self.task,
+                self.outputs,
+                preprocessed_task=self.preprocessed_task,
+                config=self.sed_task_config,
+            )
+            log_entry = f'Raw results: {raw_results} successfully generated.'
+            self.logger.add_entry(log_entry)
+            self.logger.write_log()
+            return raw_results
+        except Exception as e:
+            log_entry = f'The exception: {e} was raised while generating raw results.'
+            self.logger.add_entry(log_entry)
+            self.logger.write_log()
 
     def process_result(self, result, time_course_index=-1):
         if self.parameters['simulation'] in TIME_COURSE_SIMULATIONS:
@@ -341,7 +358,6 @@ class Biosimulator(Process):
         return values
 
     def next_update(self, interval, state):
-
         # collect the inputs
         input_values = {}
         for port_id in self.input_ports:
@@ -363,4 +379,7 @@ class Biosimulator(Process):
                     # different get_delta for different data types?
                     update[port_id][variable_id] = get_delta(
                         state[port_id][variable_id], value)
+
+        log_entry = f'Next update of value: {update} generated.'
+        self.logger.add_entry(log_entry)
         return update
