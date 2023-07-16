@@ -327,22 +327,21 @@ class Biosimulator(Process):
         self.task.simulation.output_start_time = initial_time
         self.task.simulation.output_end_time = initial_time + interval
 
-        try:
-            # execute step
-            raw_results, log = self.exec_sed_task(
-                self.task,
-                self.outputs,
-                preprocessed_task=self.preprocessed_task,
-                config=self.sed_task_config,
-            )
-            log_entry = f'Raw results: {raw_results} successfully generated.'
-            self.logger.add_entry(log_entry)
-            self.logger.write_log()
-            return raw_results
-        except Exception as e:
+        # execute step
+        raw_results, _ = self.exec_sed_task(
+            self.task,
+            self.outputs,
+            preprocessed_task=self.preprocessed_task,
+            config=self.sed_task_config,
+        )
+        log_entry = f'Raw results: {raw_results} successfully generated.'
+        self.logger.add_entry(log_entry)
+        self.logger.write_log()
+        return raw_results
+        '''except Exception as e:
             log_entry = f'The exception: {e} was raised while generating raw results.'
             self.logger.add_entry(log_entry)
-            self.logger.write_log()
+            self.logger.write_log()'''
 
     def process_result(self, result, time_course_index=-1):
         if self.parameters['simulation'] in TIME_COURSE_SIMULATIONS:
