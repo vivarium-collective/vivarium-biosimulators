@@ -5,6 +5,7 @@
     (2, {'param1': 3.0, 'param2': 4.0}, [0, 1])   # Node 2, connected to nodes 0 and 1
 '''
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Queue, Process
@@ -88,7 +89,7 @@ class Node:
 class Orchestrator:
     @classmethod
     def orchestrate_nodes(cls,
-                          node_configs: List[SingleNodeConfig],
+                          node_configs: Union[List[SingleNodeConfig], Dict[str, List[SingleNodeConfig]]],
                           *single_configs):
         """
         Parses node configurations and iterates over nodes.\n
@@ -97,12 +98,17 @@ class Orchestrator:
             :param:`*single_configs(SingleNodeConfig)`: single config objects to be parsed into a list.
         """
         all_nodes = []
-        for config in node_configs:
+        configs = cls.get_config(node_configs)
+        for config in configs:
             node = Node(config.node_id, config.biosimulator_config, config.connected_nodes)
             all_nodes.append(node)
         for node in all_nodes:
             node.start(all_nodes)
         # All nodes are now running
+
+    @classmethod
+    def get_config(cls, configs: Union[List[SingleNodeConfig], Dict[str, List[SingleNodeConfig]]]) -> List[SingleNodeConfig]:
+        return [v for v in configs.values()] if type(configs) == Dict else configs
 
     @classmethod
     def plot_results(cls, nodes, results):
@@ -124,45 +130,22 @@ class Orchestrator:
         return per
 
     @classmethod
-    def run_monte_carlo(cls, n_runs: int = 1000, n_steps: int = 50, node_configs: List[SingleNodeConfig] = None):
-        '''
-        Define the initial conditions of the Biosimulator parameters for each node and
-        run a Monte Carlo simulation with the node graph.\n
-            Args:
-                :param:`n_runs[int]`: defines the number of monte carlo runs. Defaults to `1000`.
-                :param:`n_steps[int]`: defines the number of steps for each simulation. Defaults to `50`.
-        '''
-        initial_configs = [
-            {
-                'param1': 0,
-                'param2': 1,
-            },
-            {
-                'param1': 2,
-                'param2': 3,
-            },
-            {
-                'param1': 4,
-                'param2': 5,
-            }
-        ]
+    def __run_monte_carlo(cls, n_runs: int = 1000, n_steps: int = 50, initial_configs: List[SingleNodeConfig] = None):
         # Prepare storage for simulation results
         results = []
         # Conduct the Monte Carlo simulation
         for run in range(n_runs):
-            # Generate a random perturbation for each Biosimulator parameter for each node
-            perturbations = np.random.normal(size=(len(initial_configs), 2))
+            # Generate a random perturbation for the 'total_time' parameter for each node
+            perturbations = np.random.normal(size=len(initial_configs))
             # Create nodes with perturbed Biosimulator configurations
-            if not node_configs:
-                node_configs = [
-                    (
-                        node_id,
-                        {param: value + perturbation for param, value,
-                            perturbation in zip(['param1', 'param2'], initial_config.values(), perturbation)},
-                        [other_node_id for other_node_id in range(len(initial_configs)) if other_node_id != node_id],
-                    )
-                    for node_id, initial_config, perturbation in zip(range(len(initial_configs)), initial_configs, perturbations)
-                ]
+            node_configs = [
+                (
+                    node_id,
+                    {**initial_config, 'total_time': initial_config['total_time'] + perturbation},
+                    [other_node_id for other_node_id in range(len(initial_configs)) if other_node_id != node_id],
+                )
+                for node_id, initial_config, perturbation in zip(range(len(initial_configs)), initial_configs, perturbations)
+            ]
 
             nodes = []
             for node_id, biosimulator_config, connected_nodes in node_configs:
@@ -171,67 +154,141 @@ class Orchestrator:
 
             for node in nodes:
                 node.start(nodes)
+
             # Run the simulation for n_steps and record the results
             for step in range(n_steps):
                 # Here, we're assuming that each NodeController's Biosimulator has a 'get_result' method
                 result = [node.controller.biosimulator.get_result() for node in nodes]
                 results.append(result)
+
             # Clean up processes after each run
             for node in nodes:
                 node.controller.terminate()
+
         # Convert the list of results to a numpy array for easier manipulation
         results = np.array(results)
         cls.plot_results(nodes, results)
         return results
 
+    @classmethod
+    def run_monte_carlo(cls, n_runs: int = 1000, n_steps: int = 50, initial_configs: List[SingleNodeConfig] = None):
+        # Prepare storage for simulation results
+        results = []
 
-class SimulatorPaths(str, Enum):
+        # Conduct the Monte Carlo simulation
+        for run in range(n_runs):
+            # Generate a random perturbation for the 'total_time' parameter for each node
+            perturbations = np.random.normal(size=len(initial_configs))
+
+            # Create nodes with perturbed Biosimulator configurations
+            node_configs = [
+                SingleNodeConfig(
+                    node_id=config.node_id,
+                    biosimulator_config={**config.biosimulator_config, 'total_time': config.biosimulator_config['total_time'] + perturbation},
+                    connected_nodes=config.connected_nodes
+                )
+                for config, perturbation in zip(initial_configs, perturbations)
+            ]
+
+            nodes = []
+            for config in node_configs:
+                node = Node(node_id=config.node_id, biosimulator_config=config.biosimulator_config, connected_nodes=config.connected_nodes)
+                nodes.append(node)
+
+            for node in nodes:
+                node.start(nodes)
+
+            # Run the simulation for n_steps and record the results
+            for step in range(n_steps):
+                # Here, we're assuming that each NodeController's Biosimulator has a 'get_result' method
+                result = [node.controller.biosimulator.get_result() for node in nodes]
+                results.append(result)
+
+            # Clean up processes after each run
+            for node in nodes:
+                node.controller.terminate()
+
+        # Convert the list of results to a numpy array for easier manipulation
+        results = np.array(results)
+
+        cls.plot_results(nodes, results)
+
+        return results
+
+
+class TestSimulatorPaths(str, Enum):
     SBML_MODEL_PATH = 'vivarium_biosimulators/models/BIOMD0000000297_url.xml'
-    SBML_MODEL_PATH_ALT = 'vivarium_biosimulators/models/BIOMD0000000244_url.xml'
+    SBML_MODEL_PATH_1 = 'vivarium_biosimulators/models/BIOMD0000000244_url.xml'
+    SBML_MODEL_PATH_2 = 'vivarium_biosimulators/models/BIOMD0000000734.xml'
+    SBML_MODEL_PATH_3 = 'vivarium_biosimulators/models/BIOMD0000000012_url.xml'
+    SBML_MODEL_PATH_4 = 'vivarium_biosimulators/models/BIOMD0000000002_url.xml'
     BIGG_MODEL_PATH = 'vivarium_biosimulators/models/iAF1260b.xml'
+    CARAVAGNA_MODEL_PATH = 'vivarium_biosimulators/models/Caravagna2010.xml'
     XPP_MODEL_PATH = 'Biosimulators_test_suite/examples/xpp/Wu-Biochem-Pharmacol-2006-pituitary-GH3-cells/GH3_Katp.ode'
     RBA_MODEL_PATH = 'Biosimulators_test_suite/examples/rba/Escherichia-coli-K12-WT/model.zip'
     BNGL_MODEL_PATH = 'Biosimulators_test_suite/examples/bngl/Dolan-PLoS-Comput-Biol-2015-NHEJ/Dolan2015.bngl'
 
 
-class MonteCarloSetup(int, Enum):
+MODEL_PATHS = []
+MODELS_DIRPATH = 'vivarium_biosimulators/models'
+for f in os.listdir(MODELS_DIRPATH):
+    path = os.path.join(MODELS_DIRPATH, f)
+    MODEL_PATHS.append(path)
+
+
+MODEL_PATHS = [
+    os.path.join(MODELS_DIRPATH, f) for f in os.listdir(MODELS_DIRPATH)
+]
+
+
+class TestMonteCarloSetup(int, Enum):
     N_RUNS = 1000
     N_SIMULATION_STEPS = 50
 
 
+class TestModelLanguages(str, Enum):
+    SBML = ModelLanguage.SBML.value
+
+
 class OrchestratedNodeBiosimulatorConfig(dict, Enum):
     node0_biosim_config = {
-        'biosimulator_api': 'biosimulators_tellurium',
-        'model_source': SimulatorPaths.SBML_MODEL_PATH_ALT.value,
+        'biosimulator_api': 'biosimulators_cobrapy',
+        'model_source': TestSimulatorPaths.BIGG_MODEL_PATH.value,
         'model_language': ModelLanguage.SBML.value,
-        'simulation': 'uniform_time_course',
+        'default_output_value': np.array(0.),
+        'algorithm': {
+            'kisao_id': 'KISAO_0000437',
+        },
+        'simulation': 'steady_state',
         'total_time': 10.,
     }
 
     node1_biosim_config = {
         'biosimulator_api': 'biosimulators_cobrapy',
-        'model_source': SimulatorPaths.BIGG_MODEL_PATH.value,
+        'model_source': TestSimulatorPaths.CARAVAGNA_MODEL_PATH.value,
         'model_language': ModelLanguage.SBML.value,
         'simulation': 'steady_state',
         'default_output_value': np.array(0.),
         'algorithm': {
             'kisao_id': 'KISAO_0000437',
-        }
+        },
+        'total_time': 10.,
     }
 
     node2_biosim_config = {
         'biosimulator_api': 'biosimulators_tellurium',
-        'model_source': SimulatorPaths.SBML_MODEL_PATH.value,
+        'model_source': TestSimulatorPaths.SBML_MODEL_PATH_4.value,
         'model_language': ModelLanguage.SBML.value,
-        'simulation': 'uniform_time_course',
+        'simulation': 'steady_state',
         'default_output_value': np.array(3.),
         'algorithm': {
             'kisao_id': 'KISAO_0000437',
-        }
+        },
+        'total_time': 10.,
     }
 
 
-ORCHESTRATED_SINGLE_NODE_GRAPH = {
+GRAPH = {
     'NODE_0': SingleNodeConfig(
         node_id=0,
         biosimulator_config=OrchestratedNodeBiosimulatorConfig.node0_biosim_config.value,
@@ -250,4 +307,18 @@ ORCHESTRATED_SINGLE_NODE_GRAPH = {
 }
 
 
-Orchestrator.orchestrate_nodes(node_configs=[node for node in ORCHESTRATED_SINGLE_NODE_GRAPH.values()])
+ORCHESTRATED_NODE_GRAPH = [
+    GRAPH['NODE_0'],
+    GRAPH['NODE_1'],
+    GRAPH['NODE_2'],
+]
+
+
+# Orchestrator.orchestrate_nodes(node_configs=ORCHESTRATED_NODE_GRAPH)
+
+
+'''Orchestrator.run_monte_carlo(
+    n_runs=TestMonteCarloSetup.N_RUNS.value,
+    n_steps=TestMonteCarloSetup.N_SIMULATION_STEPS.value,
+    initial_configs=ORCHESTRATED_NODE_GRAPH
+)'''
