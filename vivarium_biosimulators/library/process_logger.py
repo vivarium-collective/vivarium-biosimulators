@@ -14,10 +14,11 @@ class ProcessLogger:
         now = datetime.now().strftime('%DD_%MM_%YYYY')
         self.log[now] = [entry]
 
-    def write_log(self):
+    def write_log(self, flush=False):
         with open(self.fp, 'w') as f:
             json.dump(self.log, f, indent=4)
-        # self.flush_log()
+        if flush:
+            self.log.clear()
 
     def read_log(self, fp):
         with open(fp, 'r') as f:

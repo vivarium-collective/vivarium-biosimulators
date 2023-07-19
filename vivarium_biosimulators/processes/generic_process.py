@@ -105,6 +105,7 @@ class GenericSimulatorProcess(Process):
         if not parameters and simulator_config:
             parameters = simulator_config.__dict__
         super().__init__(parameters)
+        self.logger = ProcessLogger(dirpath='/Users/alex/Desktop/my_log')
         module = importlib.import_module(self.parameters['api'])
         self.__parse_module(module, *self.parameters['imports']['api_imports'])
         self.primary_executer = self.__set_primary_executer(self.parameters['imports']['primary_executer'], module)
@@ -273,16 +274,25 @@ class GenericSimulatorProcess(Process):
         # TODO -- different method for different data types
         return after - before
 
+    def __get_primary_executer_signature(self) -> OrderedDict:
+        import inspect
+        return inspect.signature(self.primary_executer).parameters
+
     def run_task(self, *run_parameters):
         """
         Execute the primary simulator logic. 
 
-        Keyword arguments should be specific to those required by the primary execution logic of the given simulator.
+        Arguments should be specific to those required by the primary execution logic of the given simulator.
 
         #### Parameters
         ----------
         **run_parameters: `kwargs: Any`
             parameters required to run a simulation method.
+
+        #### Returns
+        ------------
+        `Any`
+            whatever`type()`is returned by the primary execution logic aka`self.primary_executer()`and executer signature.
 
         #### Example
         -------
@@ -291,19 +301,20 @@ class GenericSimulatorProcess(Process):
             `r = te.loada('S1 -> S2; k1*S1; k1 = 0.1; S1 = 10')`\n
             `r.simulate(0, 50, 100)`\n
                         ^  ^    ^\n
-                        here exist the `**run_parameters`.
+                        here exist the `**run_parameters`.\n
+        Thus in the case of Tellurium, the processes' `self.run_task()` method would return a `RoadRunner` array result object.
         """
-        self.primary_executer(*run_parameters)
+        return self.primary_executer(*run_parameters)
 
-    def next_update(self, interval, state):
+    def next_update(self, state, *run_parameters):
         # collect the inputs
         input_values = {}
         for port_id in self.input_ports:
             input_values.update(state[port_id])
 
         # run task
-        run_parameters = [v for v in input_values.values()]
-        raw_results = self.run_task(run_parameters)
+        run_parameters_signature = self.__get_primary_executer_signature()
+        raw_results = self.run_task(*run_parameters)
 
         # transform results
         update = {}
@@ -322,6 +333,3 @@ class GenericSimulatorProcess(Process):
         log_entry = f'Next update of value: {update} generated.'
         self.logger.add_entry(log_entry)
         return update
-
-
-antimony_ode = 'S1 -> S2; k1*S1; k1 = 0.1; S1 = 10'
