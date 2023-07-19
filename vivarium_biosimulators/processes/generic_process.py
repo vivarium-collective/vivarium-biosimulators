@@ -153,6 +153,21 @@ class GenericSimulatorProcess(Process):
         self.__set_attribute_from_params(module=module, content_value=executer)
 
     def __parse_module(self, mod, *module_content) -> None:
+        """
+        Parse out imported methods required from `self.parameters['api']
+
+        #### Parameters
+        ---------------
+        mod: `object(ModuleType)`
+            the module that methods are being imported from.
+        module_content: `Tuple(str)`
+            methods and content being imported from the`mod`, in the form of a string.
+
+        #### Returns
+        ------------
+        `None`
+            sets the value of all imported module content EXCEPT for `primary_executer`.
+        """
         self.__set_attribute_from_params(*module_content, mod)
 
     def __assign_ports(self) -> None:
