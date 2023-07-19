@@ -42,22 +42,23 @@ class SimulatorConfig:
     `SimulatorConfig`
         Instance of a configuration object to be used as the default value for the `Process`.
     """
-    api: str
-    api_imports: Union[Tuple, List[Union[str, None]]]
+    '''api: str = ''
+    imports: Dict
     input_ports: Optional[Dict]
     output_ports: Optional[Dict]
-    default_input_port_name: str
-    default_output_port_name: str
     emit_ports: List[str]
     algorithm: Optional[Dict]
     sed_task_config: Optional[Dict]
-    time_step: Optional[float]
-    model_source: Optional[str]
-    model_language: Optional[str]
-    simulation: Optional[str]
-    name: Optional[Any]
-    _schema: Optional[Any]
-    _parallel: Optional[bool]
+    default_input_port_name: str = ''
+    default_output_port_name: str = ''
+    time_step: Optional[float] = None
+    model_source: Optional[str] = ''
+    model_language: Optional[str] = ''
+    simulation: Optional[str] = ''
+    name: Optional[Any] = ''
+    _schema: Optional[Any] = ''
+    _parallel: Optional[bool] = False'''
+    pass
 
 
 class GenericSimulatorProcess(Process):
@@ -111,7 +112,7 @@ class GenericSimulatorProcess(Process):
         self.primary_executer = self.__set_primary_executer(self.parameters['imports']['primary_executer'], module)
         self.__assign_ports()
 
-    def __set_attribute_from_params(self, content: str, module: object) -> None:
+    def __set_attribute_from_params(self, module: object, content_value: str = None, *content) -> None:
         """
         Set Process attributes with methods and/or content from given module.
 
@@ -123,9 +124,14 @@ class GenericSimulatorProcess(Process):
             module object loaded from `importlib.import_module`.
 
         """
-        self.__setattr__(content, getattr(module, content))
+        if not content_value:
+            value = list(map(lambda x: getattr(module, x), *content))
+            for v in value:
+                self.__setattr__(*content, v)
+        else:
+            self.__setattr__(*content, content_value)
 
-    def __set_primary_executer(self, executer: str, module: object) -> None:
+    def __set_primary_executer(self, module: object, executer: str) -> None:
         """
         Use the `self.__set_attribute_from_params()` method to define what this process runs in the generic `self.run_task()` method.
 
@@ -144,11 +150,10 @@ class GenericSimulatorProcess(Process):
             sets the value of`self.executer`which is used as the primary logic(`function`) in the generic`self.run_task()`method.
 
         """
-        self.__set_attribute_from_params(executer, module)
+        self.__set_attribute_from_params(module=module, content_value=executer)
 
     def __parse_module(self, mod, *module_content) -> None:
-        for content in module_content:
-            self.__set_attribute_from_params(content, mod)
+        self.__set_attribute_from_params(*module_content, mod)
 
     def __assign_ports(self) -> None:
         """

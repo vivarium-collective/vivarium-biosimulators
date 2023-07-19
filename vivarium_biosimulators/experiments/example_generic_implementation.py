@@ -4,22 +4,23 @@ from vivarium_biosimulators.processes.generic_process import GenericSimulatorPro
 
 def execute():
 
-    tellurium_process_config = SimulatorConfig(
-        api='tellurium',
-        input_ports=None,
-        output_ports=None,
-        default_input_port_name='input',
-        default_output_port_name='output',
-        emit_ports=['output'],
-        algorithm={
-            'kisao_id': 'KISAO_0000019',
+    tellurium_process_config = {
+        'api': 'tellurium',
+        'imports': {
+            'api_imports': 'loada',
+            'primary_executer': 'simulate',
         },
-        _parallel=True
-    )
+        'input_ports': None,
+        'output_ports': None,
+        'default_input_port_name': 'inputs',
+        'default_output_port_name': 'outputs',
+        'emit_ports': ['outputs'],
+        '_parallel': True,
+    }
 
     tellurium_process = GenericSimulatorProcess(
-        parameters=None,
-        simulator_config=tellurium_process_config
+        parameters=tellurium_process_config,
+        simulator_config=None,
     )
 
     # make a topology
