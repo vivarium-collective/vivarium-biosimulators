@@ -44,8 +44,8 @@ class SimulatorConfig:
     """
     api: str
     api_imports: Union[Tuple, List[Union[str, None]]]
-    input_ports: Dict[Any]
-    output_ports: Dict[Any]
+    input_ports: Optional[Dict]
+    output_ports: Optional[Dict]
     default_input_port_name: str
     default_output_port_name: str
     emit_ports: List[str]

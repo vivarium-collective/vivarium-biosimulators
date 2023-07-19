@@ -42,6 +42,7 @@ def execute():
         'initial_state': initial_model_state,
         'display_info': False}
     output = simulate_process(tellurium_process, sim_settings)
+    print(output)
     return output
 
 
